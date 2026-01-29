@@ -37,16 +37,20 @@ class GoogleAuthResponse {
 
 /// Exception thrown when role is required for new Google users
 class RoleRequiredException implements Exception {
-  final String idToken;
+  final String? idToken;
+  final String? accessToken;
   final String email;
   final String? displayName;
   final String? photoUrl;
+  final bool isWeb;
 
   RoleRequiredException({
-    required this.idToken,
+    this.idToken,
+    this.accessToken,
     required this.email,
     this.displayName,
     this.photoUrl,
+    required this.isWeb,
   });
 
   @override
@@ -102,19 +106,16 @@ class GoogleAuthService {
       debugPrint('🔑 Access Token: ${googleAuth.accessToken != null ? "✅ Available" : "❌ Missing"}');
       debugPrint('🔑 ID Token: ${googleAuth.idToken != null ? "✅ Available" : "❌ Missing"}');
 
-      // ⭐ On WEB: idToken might be null (this is expected behavior)
-      // We'll use a different approach for web
+      // ⭐ CRITICAL FIX: Handle web vs mobile differently
       if (kIsWeb) {
-        debugPrint('⚠️ Running on WEB - Using alternative authentication method');
+        debugPrint('⚠️ Running on WEB - Using accessToken for authentication');
         
-        // On web, we can use the accessToken to get user info from Google
-        // Then your backend can verify it
         if (googleAuth.accessToken == null) {
-          throw ApiException('Failed to get Google access token');
+          throw ApiException('Failed to get Google access token on web');
         }
 
         return GoogleSignInResult(
-          idToken: googleAuth.idToken, // May be null on web
+          idToken: null, // Web doesn't provide idToken reliably
           accessToken: googleAuth.accessToken!,
           email: googleUser.email,
           displayName: googleUser.displayName,
@@ -122,13 +123,13 @@ class GoogleAuthService {
           isWeb: true,
         );
       } else {
-        // On MOBILE: We should have idToken
+        debugPrint('📱 Running on MOBILE - Using idToken for authentication');
+        
         if (googleAuth.idToken == null) {
           debugPrint('❌ CRITICAL: ID Token is null on mobile!');
           throw ApiException('Failed to get Google ID token. Please try again.');
         }
 
-        debugPrint('✅ ID Token received successfully');
         return GoogleSignInResult(
           idToken: googleAuth.idToken!,
           accessToken: googleAuth.accessToken,
@@ -189,25 +190,34 @@ class GoogleAuthService {
     bool isWeb = false,
   }) async {
     try {
-      // Build request body
+      // ⭐ CRITICAL FIX: Build request body correctly based on platform
       final Map<String, dynamic> body = {};
 
-      if (idToken != null) {
-        body['idToken'] = idToken;
-      }
-      
-      if (accessToken != null && isWeb) {
-        // On web, send accessToken as fallback
+      // Add ONLY the appropriate token for the platform
+      if (isWeb) {
+        // WEB: Send ONLY accessToken
+        if (accessToken == null) {
+          throw ApiException('Access token is required for web authentication');
+        }
         body['accessToken'] = accessToken;
+        debugPrint('🌐 WEB: Using accessToken');
+      } else {
+        // MOBILE: Send ONLY idToken
+        if (idToken == null) {
+          throw ApiException('ID token is required for mobile authentication');
+        }
+        body['idToken'] = idToken;
+        debugPrint('📱 MOBILE: Using idToken');
       }
 
+      // Add role if provided (required for new users)
       if (role != null) {
         body['role'] = role.name;
+        debugPrint('🎭 Role included: ${role.name}');
       }
 
       debugPrint('📤 Sending Google auth request to backend...');
       debugPrint('📝 Request body keys: ${body.keys.join(", ")}');
-      debugPrint('🌐 Is Web: $isWeb');
 
       final response = await _apiService.post(
         ApiConstants.googleAuth,
@@ -238,10 +248,12 @@ class GoogleAuthService {
           e.message.contains('role is required')) {
         debugPrint('⚠️ Role required for new user');
         throw RoleRequiredException(
-          idToken: idToken ?? '',
+          idToken: idToken,
+          accessToken: accessToken,
           email: email ?? '',
           displayName: displayName,
           photoUrl: photoUrl,
+          isWeb: isWeb,
         );
       }
       rethrow;
@@ -252,12 +264,21 @@ class GoogleAuthService {
   }
 
   /// Complete Google sign-up with role for new users
+  /// This is called after RoleRequiredException is caught and user selects a role
   Future<GoogleAuthResponse> completeGoogleSignUp({
-    required String idToken,
+    String? idToken,
+    String? accessToken,
     required UserRole role,
+    required bool isWeb,
   }) async {
     debugPrint('🔵 Completing Google sign-up with role: ${role.name}');
-    return await authenticateWithBackend(idToken: idToken, role: role);
+    
+    return await authenticateWithBackend(
+      idToken: idToken,
+      accessToken: accessToken,
+      role: role,
+      isWeb: isWeb,
+    );
   }
 
   /// Sign out from Google
@@ -283,8 +304,8 @@ class GoogleAuthService {
 
 /// Result from Google Sign-In containing the ID token and user info
 class GoogleSignInResult {
-  final String? idToken; // Nullable for web
-  final String? accessToken;
+  final String? idToken; // Nullable for web (web doesn't provide idToken)
+  final String? accessToken; // Nullable for mobile (optional on mobile)
   final String email;
   final String? displayName;
   final String? photoUrl;

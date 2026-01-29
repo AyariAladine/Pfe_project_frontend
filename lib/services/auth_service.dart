@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../core/constants/api_constants.dart';
 import '../models/user_model.dart';
 import 'api_service.dart';
@@ -38,25 +39,35 @@ class AuthService {
         message: response.message,
       );
     } on RoleRequiredException catch (e) {
-      // New user needs to select a role
+      // ⭐ CRITICAL FIX: Pass all necessary data including idToken, accessToken, and isWeb flag
       return GoogleAuthResult.roleRequired(
         idToken: e.idToken,
+        accessToken: e.accessToken,
         email: e.email,
         displayName: e.displayName,
         photoUrl: e.photoUrl,
+        isWeb: e.isWeb,
       );
     }
   }
 
   /// Complete Google sign-up with role for new users
+  /// ⭐ CRITICAL FIX: Accept both idToken and accessToken, determine platform automatically
   Future<GoogleAuthResult> completeGoogleSignUp({
-    required String idToken,
+    String? idToken,
+    String? accessToken,
     required UserRole role,
+    bool? isWeb, // Optional - will auto-detect if not provided
   }) async {
     try {
+      // Auto-detect platform if not explicitly provided
+      final platformIsWeb = isWeb ?? kIsWeb;
+
       final response = await _googleAuthService.completeGoogleSignUp(
         idToken: idToken,
+        accessToken: accessToken,
         role: role,
+        isWeb: platformIsWeb,
       );
 
       _currentUser = response.user;
@@ -215,6 +226,9 @@ class AuthService {
           requiresAuth: true,
         );
       }
+
+      // Also sign out from Google
+      await _googleAuthService.signOut();
     } catch (e) {
       // Ignore logout errors, just clear tokens
     } finally {
@@ -242,5 +256,146 @@ class AuthService {
 
   void dispose() {
     _apiService.dispose();
+  }
+}
+
+/// ⭐ GoogleAuthResult class - Result from Google authentication
+class GoogleAuthResult {
+  final bool success;
+  final bool cancelled;
+  final bool needsRole;
+  final UserModel? user;
+  final bool? isNewUser;
+  final bool? accountLinked;
+  final String? message;
+  
+  // Fields for role selection
+  final String? idToken;
+  final String? accessToken;
+  final String? email;
+  final String? displayName;
+  final String? photoUrl;
+  final bool? isWeb;
+
+  GoogleAuthResult._({
+    required this.success,
+    required this.cancelled,
+    required this.needsRole,
+    this.user,
+    this.isNewUser,
+    this.accountLinked,
+    this.message,
+    this.idToken,
+    this.accessToken,
+    this.email,
+    this.displayName,
+    this.photoUrl,
+    this.isWeb,
+  });
+
+  factory GoogleAuthResult.success({
+    required UserModel user,
+    bool? isNewUser,
+    bool? accountLinked,
+    String? message,
+  }) {
+    return GoogleAuthResult._(
+      success: true,
+      cancelled: false,
+      needsRole: false,
+      user: user,
+      isNewUser: isNewUser,
+      accountLinked: accountLinked,
+      message: message,
+    );
+  }
+
+  factory GoogleAuthResult.cancelled() {
+    return GoogleAuthResult._(
+      success: false,
+      cancelled: true,
+      needsRole: false,
+    );
+  }
+
+  factory GoogleAuthResult.roleRequired({
+    String? idToken,
+    String? accessToken,
+    required String email,
+    String? displayName,
+    String? photoUrl,
+    required bool isWeb,
+  }) {
+    return GoogleAuthResult._(
+      success: false,
+      cancelled: false,
+      needsRole: true,
+      idToken: idToken,
+      accessToken: accessToken,
+      email: email,
+      displayName: displayName,
+      photoUrl: photoUrl,
+      isWeb: isWeb,
+    );
+  }
+}
+
+// Supporting DTOs
+class CreateUserDto {
+  final String name;
+  final String lastName;
+  final String email;
+  final String password;
+  final UserRole role;
+  final String phoneNumber;
+
+  CreateUserDto({
+    required this.name,
+    required this.lastName,
+    required this.email,
+    required this.password,
+    required this.role,
+    required this.phoneNumber,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'lastName': lastName,
+        'email': email,
+        'password': password,
+        'role': role.name,
+        'phoneNumber': phoneNumber,
+      };
+}
+
+class LoginDto {
+  final String email;
+  final String password;
+
+  LoginDto({required this.email, required this.password});
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+        'password': password,
+      };
+}
+
+class AuthResponse {
+  final String accessToken;
+  final String refreshToken;
+  final UserModel user;
+
+  AuthResponse({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.user,
+  });
+
+  factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    return AuthResponse(
+      accessToken: json['access_token'] as String,
+      refreshToken: json['refresh_token'] as String,
+      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
+    );
   }
 }

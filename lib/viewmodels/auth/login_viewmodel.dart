@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../../models/user_model.dart';
+import '../../models/user_model.dart' hide GoogleAuthResult;
 
 class LoginViewModel extends ChangeNotifier {
   final TextEditingController emailController = TextEditingController();
@@ -12,16 +12,18 @@ class LoginViewModel extends ChangeNotifier {
   bool _rememberMe = false;
   bool _isGoogleLoading = false;
   
-  // Store pending Google sign-up data when role is required
+  // ⭐ Store pending Google sign-up data when role is required
   String? _pendingGoogleIdToken;
+  String? _pendingGoogleAccessToken;  // Added for web support
   String? _pendingGoogleEmail;
   String? _pendingGoogleDisplayName;
   String? _pendingGooglePhotoUrl;
+  bool? _pendingGoogleIsWeb;  // Track platform
 
   bool get obscurePassword => _obscurePassword;
   bool get rememberMe => _rememberMe;
   bool get isGoogleLoading => _isGoogleLoading;
-  bool get hasPendingGoogleSignUp => _pendingGoogleIdToken != null;
+  bool get hasPendingGoogleSignUp => _pendingGoogleIdToken != null || _pendingGoogleAccessToken != null;
   String? get pendingGoogleEmail => _pendingGoogleEmail;
   String? get pendingGoogleDisplayName => _pendingGoogleDisplayName;
 
@@ -42,7 +44,7 @@ class LoginViewModel extends ChangeNotifier {
   /// Returns GoogleAuthResult which can indicate:
   /// - success: user is logged in
   /// - cancelled: user cancelled the flow
-  /// - roleRequired: new user needs to select a role
+  /// - needsRole: new user needs to select a role
   Future<GoogleAuthResult> signInWithGoogle() async {
     _isGoogleLoading = true;
     notifyListeners();
@@ -50,12 +52,14 @@ class LoginViewModel extends ChangeNotifier {
     try {
       final result = await _authService.signInWithGoogle();
       
-      // If role is required, store the pending data
+      // ⭐ If role is required, store the pending data (including accessToken for web)
       if (result.needsRole) {
         _pendingGoogleIdToken = result.idToken;
+        _pendingGoogleAccessToken = result.accessToken;
         _pendingGoogleEmail = result.email;
         _pendingGoogleDisplayName = result.displayName;
         _pendingGooglePhotoUrl = result.photoUrl;
+        _pendingGoogleIsWeb = result.isWeb;
       }
       
       return result;
@@ -67,7 +71,7 @@ class LoginViewModel extends ChangeNotifier {
 
   /// Complete Google sign-up with the selected role
   Future<GoogleAuthResult> completeGoogleSignUp(UserRole role) async {
-    if (_pendingGoogleIdToken == null) {
+    if (_pendingGoogleIdToken == null && _pendingGoogleAccessToken == null) {
       throw Exception('No pending Google sign-up');
     }
     
@@ -75,13 +79,16 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
+      // ⭐ Pass both idToken and accessToken to support both web and mobile
       final result = await _authService.completeGoogleSignUp(
-        idToken: _pendingGoogleIdToken!,
+        idToken: _pendingGoogleIdToken,
+        accessToken: _pendingGoogleAccessToken,
         role: role,
+        isWeb: _pendingGoogleIsWeb,
       );
       
       // Clear pending data on success
-      if (result.isSuccess) {
+      if (result.success) {
         clearPendingGoogleSignUp();
       }
       
@@ -95,9 +102,11 @@ class LoginViewModel extends ChangeNotifier {
   /// Clear pending Google sign-up data
   void clearPendingGoogleSignUp() {
     _pendingGoogleIdToken = null;
+    _pendingGoogleAccessToken = null;
     _pendingGoogleEmail = null;
     _pendingGoogleDisplayName = null;
     _pendingGooglePhotoUrl = null;
+    _pendingGoogleIsWeb = null;
     notifyListeners();
   }
 

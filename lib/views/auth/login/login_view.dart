@@ -399,7 +399,7 @@ class _LoginViewContent extends StatelessWidget {
                     
                     if (!context.mounted) return;
                     
-                    if (result.isSuccess) {
+                    if (result.success) {
                       // User logged in successfully
                       Navigator.pushAndRemoveUntil(
                         context,
@@ -412,7 +412,7 @@ class _LoginViewContent extends StatelessWidget {
                       if (selectedRole != null && context.mounted) {
                         try {
                           final completeResult = await loginVM.completeGoogleSignUp(selectedRole);
-                          if (completeResult.isSuccess && context.mounted) {
+                          if (completeResult.success && context.mounted) {
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (_) => const HomeView()),
