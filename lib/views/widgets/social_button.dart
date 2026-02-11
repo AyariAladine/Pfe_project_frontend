@@ -33,17 +33,10 @@ class SocialButton extends StatelessWidget {
       backgroundColor: Colors.white,
       textColor: AppColors.textPrimary,
       borderColor: AppColors.border,
-      icon: Image.network(
-        'https://www.google.com/favicon.ico',
-        width: 24,
-        height: 24,
-        errorBuilder: (context, error, stackTrace) {
-          return const Icon(
-            Icons.g_mobiledata,
-            size: 24,
-            color: Colors.red,
-          );
-        },
+      icon: const Icon(
+        Icons.g_mobiledata,
+        size: 24,
+        color: Colors.red,
       ),
     );
   }

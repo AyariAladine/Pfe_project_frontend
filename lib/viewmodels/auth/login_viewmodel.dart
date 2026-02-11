@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pfe_project/services/token_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart' hide GoogleAuthResult;
 
@@ -9,20 +10,19 @@ class LoginViewModel extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
-  bool _rememberMe = false;
   bool _isGoogleLoading = false;
+  bool _isInitialized = false;
   
   // ⭐ Store pending Google sign-up data when role is required
   String? _pendingGoogleIdToken;
   String? _pendingGoogleAccessToken;  // Added for web support
   String? _pendingGoogleEmail;
   String? _pendingGoogleDisplayName;
-  String? _pendingGooglePhotoUrl;
   bool? _pendingGoogleIsWeb;  // Track platform
 
   bool get obscurePassword => _obscurePassword;
-  bool get rememberMe => _rememberMe;
   bool get isGoogleLoading => _isGoogleLoading;
+  bool get isInitialized => _isInitialized;
   bool get hasPendingGoogleSignUp => _pendingGoogleIdToken != null || _pendingGoogleAccessToken != null;
   String? get pendingGoogleEmail => _pendingGoogleEmail;
   String? get pendingGoogleDisplayName => _pendingGoogleDisplayName;
@@ -30,13 +30,18 @@ class LoginViewModel extends ChangeNotifier {
   String get email => emailController.text.trim();
   String get password => passwordController.text;
 
-  void togglePasswordVisibility() {
-    _obscurePassword = !_obscurePassword;
+  /// Initialize - load saved email if exists
+  Future<void> init() async {
+    final savedEmail = await TokenService.getSavedEmail();
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      emailController.text = savedEmail;
+    }
+    _isInitialized = true;
     notifyListeners();
   }
 
-  void toggleRememberMe() {
-    _rememberMe = !_rememberMe;
+  void togglePasswordVisibility() {
+    _obscurePassword = !_obscurePassword;
     notifyListeners();
   }
 
@@ -58,7 +63,6 @@ class LoginViewModel extends ChangeNotifier {
         _pendingGoogleAccessToken = result.accessToken;
         _pendingGoogleEmail = result.email;
         _pendingGoogleDisplayName = result.displayName;
-        _pendingGooglePhotoUrl = result.photoUrl;
         _pendingGoogleIsWeb = result.isWeb;
       }
       
@@ -105,7 +109,6 @@ class LoginViewModel extends ChangeNotifier {
     _pendingGoogleAccessToken = null;
     _pendingGoogleEmail = null;
     _pendingGoogleDisplayName = null;
-    _pendingGooglePhotoUrl = null;
     _pendingGoogleIsWeb = null;
     notifyListeners();
   }
@@ -118,7 +121,6 @@ class LoginViewModel extends ChangeNotifier {
     emailController.clear();
     passwordController.clear();
     _obscurePassword = true;
-    _rememberMe = false;
     notifyListeners();
   }
 

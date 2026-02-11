@@ -442,34 +442,6 @@ class _BiometricsStep extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // Device info display
-          if (vm.deviceId != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                children: [
-                  _InfoRow(
-                    icon: Icons.smartphone,
-                    label: l10n.device,
-                    value: vm.deviceModel ?? 'Unknown',
-                  ),
-                  const Divider(height: 16),
-                  _InfoRow(
-                    icon: Icons.computer,
-                    label: l10n.platform,
-                    value: vm.devicePlatform?.toUpperCase() ?? 'Unknown',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-
           if (vm.error != null) ...[
             Container(
               padding: const EdgeInsets.all(12),
@@ -521,6 +493,7 @@ class _BiometricsStep extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -620,13 +593,6 @@ class _CompleteStep extends StatelessWidget {
                   label: l10n.biometrics,
                   value: vm.biometricsEnabled ? l10n.enabled : l10n.disabled,
                   isVerified: vm.biometricsEnabled,
-                ),
-                const Divider(height: 24),
-                _SummaryRow(
-                  icon: Icons.smartphone,
-                  label: l10n.deviceRegistered,
-                  value: vm.deviceModel ?? '-',
-                  isVerified: vm.deviceId != null,
                 ),
               ],
             ),

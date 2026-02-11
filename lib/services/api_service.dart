@@ -58,7 +58,7 @@ class ApiService {
   }
   
   /// Make a GET request
-  Future<Map<String, dynamic>> get(
+  Future<dynamic> get(
     String endpoint, {
     bool requiresAuth = false,
   }) async {
@@ -70,7 +70,7 @@ class ApiService {
         headers: headers,
       );
       
-      return _handleResponse(response);
+      return _handleResponseDynamic(response);
     } on SocketException {
       throw ApiException(ErrorCodes.noInternet);
     } catch (e) {
@@ -125,6 +125,75 @@ class ApiService {
     }
   }
   
+  /// Make a POST request with multipart/form-data (form fields + optional file)
+  Future<Map<String, dynamic>> postMultipart(
+    String endpoint, {
+    Map<String, String>? fields,
+    Uint8List? fileBytes,
+    String? fileName,
+    String fieldName = 'file',
+    bool requiresAuth = false,
+  }) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add auth header if required
+      if (requiresAuth) {
+        final token = await TokenService.getAccessToken();
+        if (token == null) {
+          throw ApiException(ErrorCodes.loginRequired);
+        }
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Add form fields
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      // Add file if provided
+      if (fileBytes != null && fileName != null) {
+        final ext = fileName.split('.').last.toLowerCase();
+        MediaType? contentType;
+        switch (ext) {
+          case 'jpg':
+          case 'jpeg':
+            contentType = MediaType('image', 'jpeg');
+            break;
+          case 'png':
+            contentType = MediaType('image', 'png');
+            break;
+          case 'webp':
+            contentType = MediaType('image', 'webp');
+            break;
+          case 'pdf':
+            contentType = MediaType('application', 'pdf');
+            break;
+          default:
+            contentType = MediaType('application', 'octet-stream');
+        }
+
+        request.files.add(http.MultipartFile.fromBytes(
+          fieldName,
+          fileBytes,
+          filename: fileName,
+          contentType: contentType,
+        ));
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } on SocketException {
+      throw ApiException(ErrorCodes.noInternet);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(ErrorCodes.unexpectedError);
+    }
+  }
+
   /// Upload a file using multipart/form-data (works on both web and mobile)
   Future<Map<String, dynamic>> uploadFile(
     String endpoint, {
@@ -206,7 +275,7 @@ class ApiService {
     return ApiConstants.headers;
   }
   
-  /// Handle HTTP response
+  /// Handle HTTP response (returns Map)
   Map<String, dynamic> _handleResponse(http.Response response) {
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     
@@ -242,6 +311,40 @@ class ApiService {
       default:
         throw ApiException(rawMessage.isNotEmpty ? rawMessage : ErrorCodes.unexpectedError, statusCode: response.statusCode);
     }
+  }
+  
+  /// Handle HTTP response (returns dynamic - can be Map or List)
+  dynamic _handleResponseDynamic(http.Response response) {
+    final body = jsonDecode(response.body);
+    
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+    
+    // Handle error responses
+    if (body is Map<String, dynamic>) {
+      final message = body['message'];
+      final rawMessage = message is List 
+          ? message.first.toString()
+          : message?.toString() ?? '';
+      
+      switch (response.statusCode) {
+        case 400:
+          throw ApiException(rawMessage.isNotEmpty ? rawMessage : ErrorCodes.unexpectedError, statusCode: 400);
+        case 401:
+          throw ApiException(ErrorCodes.invalidCredentials, statusCode: 401);
+        case 403:
+          throw ApiException(ErrorCodes.unauthorized, statusCode: 403);
+        case 404:
+          throw ApiException(ErrorCodes.notFound, statusCode: 404);
+        case 500:
+          throw ApiException(ErrorCodes.serverError, statusCode: 500);
+        default:
+          throw ApiException(rawMessage.isNotEmpty ? rawMessage : ErrorCodes.unexpectedError, statusCode: response.statusCode);
+      }
+    }
+    
+    throw ApiException(ErrorCodes.unexpectedError, statusCode: response.statusCode);
   }
   
   /// Refresh access token using refresh token

@@ -11,6 +11,7 @@ class TokenService {
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
+  static const String _savedEmailKey = 'saved_email';
   
   /// Save access token
   static Future<void> saveAccessToken(String token) async {
@@ -68,5 +69,20 @@ class TokenService {
   static Future<bool> hasTokens() async {
     final accessToken = await getAccessToken();
     return accessToken != null && accessToken.isNotEmpty;
+  }
+  
+  /// Save email for auto-fill (Remember Me)
+  static Future<void> saveEmail(String email) async {
+    await _storage.write(key: _savedEmailKey, value: email);
+  }
+  
+  /// Get saved email for auto-fill
+  static Future<String?> getSavedEmail() async {
+    return await _storage.read(key: _savedEmailKey);
+  }
+  
+  /// Clear saved email
+  static Future<void> clearSavedEmail() async {
+    await _storage.delete(key: _savedEmailKey);
   }
 }

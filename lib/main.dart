@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'core/localization/app_localizations.dart';
@@ -7,10 +8,12 @@ import 'core/theme/app_theme.dart';
 import 'services/language_provider.dart';
 import 'services/theme_provider.dart';
 import 'viewmodels/auth/auth_viewmodel.dart';
-import 'views/auth/login/login_view.dart';
+import 'views/splash/splash_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Disable Google Fonts runtime fetching on web to prevent CanvasKit assertion errors
+  GoogleFonts.config.allowRuntimeFetching = false;
   runApp(const MyApp());
 }
 
@@ -59,8 +62,8 @@ class MyApp extends StatelessWidget {
               );
             },
             
-            // Home
-            home: const LoginView(),
+            // Home - Start with splash screen to check auth status
+            home: const SplashView(),
           );
         },
       ),

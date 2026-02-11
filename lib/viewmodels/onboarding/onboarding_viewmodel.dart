@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/ocr_service.dart';
 import '../../services/auth_service.dart';
@@ -28,16 +27,10 @@ class OnboardingViewModel extends ChangeNotifier {
   bool _biometricsAvailable = false;
   List<BiometricType> _availableBiometrics = [];
   
-  // Device Info
-  String? _deviceId;
-  String? _deviceModel;
-  String? _devicePlatform;
-  
   // Loading state for initial check
   bool _initialLoading = true;
   
   final LocalAuthentication _localAuth = LocalAuthentication();
-  final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
   final OcrService _ocrService = OcrService();
   final AuthService _authService = AuthService();
 
@@ -52,9 +45,6 @@ class OnboardingViewModel extends ChangeNotifier {
   bool get biometricsEnabled => _biometricsEnabled;
   bool get biometricsAvailable => _biometricsAvailable;
   List<BiometricType> get availableBiometrics => _availableBiometrics;
-  String? get deviceId => _deviceId;
-  String? get deviceModel => _deviceModel;
-  String? get devicePlatform => _devicePlatform;
 
   OnboardingViewModel() {
     _initialize();
@@ -64,7 +54,6 @@ class OnboardingViewModel extends ChangeNotifier {
     _initialLoading = true;
     notifyListeners();
     
-    await _initDeviceInfo();
     await _checkBiometrics();
     await _checkExistingProgress();
     
@@ -161,49 +150,6 @@ class OnboardingViewModel extends ChangeNotifier {
   void goToStep(OnboardingStep step) {
     _currentStep = step;
     notifyListeners();
-  }
-
-  // Device Info
-  Future<void> _initDeviceInfo() async {
-    try {
-      if (kIsWeb) {
-        // On web, generate a simple device ID from timestamp
-        _deviceId = 'web_${DateTime.now().millisecondsSinceEpoch}';
-        _deviceModel = 'Web Browser';
-        _devicePlatform = 'web';
-      } else {
-        final deviceData = await _deviceInfo.deviceInfo;
-        if (deviceData is AndroidDeviceInfo) {
-          _deviceId = deviceData.id;
-          _deviceModel = '${deviceData.manufacturer} ${deviceData.model}';
-          _devicePlatform = 'android';
-        } else if (deviceData is IosDeviceInfo) {
-          _deviceId = deviceData.identifierForVendor;
-          _deviceModel = deviceData.model;
-          _devicePlatform = 'ios';
-        } else if (deviceData is WindowsDeviceInfo) {
-          _deviceId = deviceData.deviceId;
-          _deviceModel = deviceData.computerName;
-          _devicePlatform = 'windows';
-        } else if (deviceData is MacOsDeviceInfo) {
-          _deviceId = deviceData.systemGUID;
-          _deviceModel = deviceData.model;
-          _devicePlatform = 'macos';
-        } else if (deviceData is LinuxDeviceInfo) {
-          _deviceId = deviceData.machineId;
-          _deviceModel = deviceData.prettyName;
-          _devicePlatform = 'linux';
-        }
-      }
-      notifyListeners();
-    } catch (e) {
-      // Fallback for any platform issues
-      debugPrint('Error getting device info: $e');
-      _deviceId = 'unknown_${DateTime.now().millisecondsSinceEpoch}';
-      _deviceModel = 'Unknown Device';
-      _devicePlatform = kIsWeb ? 'web' : 'unknown';
-      notifyListeners();
-    }
   }
 
   // Biometrics
@@ -341,9 +287,6 @@ class OnboardingViewModel extends ChangeNotifier {
       'cinNumber': _cinNumber,
       'cinVerified': _cinVerified,
       'biometricsEnabled': _biometricsEnabled,
-      'deviceId': _deviceId,
-      'deviceModel': _deviceModel,
-      'devicePlatform': _devicePlatform,
     };
   }
 }

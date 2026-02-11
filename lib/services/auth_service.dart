@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:device_info_plus/device_info_plus.dart';
 import '../core/constants/api_constants.dart';
 import '../models/user_model.dart';
 import 'api_service.dart';
@@ -31,6 +32,9 @@ class AuthService {
       }
 
       _currentUser = response.user;
+
+      // Auto-save email for next login (Remember Me)
+      await TokenService.saveEmail(response.user.email);
 
       return GoogleAuthResult.success(
         user: response.user,
@@ -71,6 +75,9 @@ class AuthService {
       );
 
       _currentUser = response.user;
+
+      // Auto-save email for next login (Remember Me)
+      await TokenService.saveEmail(response.user.email);
 
       return GoogleAuthResult.success(
         user: response.user,
@@ -122,7 +129,17 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final loginDto = LoginDto(email: email, password: password);
+      // Collect device information
+      final deviceInfo = await _getDeviceInfo();
+      
+      final loginDto = LoginDto(
+        email: email,
+        password: password,
+        deviceId: deviceInfo['deviceId'],
+        deviceModel: deviceInfo['deviceModel'],
+        platform: deviceInfo['platform'],
+        deviceName: deviceInfo['deviceName'],
+      );
 
       final response = await _apiService.post(
         ApiConstants.login,
@@ -137,6 +154,9 @@ class AuthService {
         refreshToken: authResponse.refreshToken,
         userId: authResponse.user.id,
       );
+      
+      // Auto-save email for next login (Remember Me)
+      await TokenService.saveEmail(email);
 
       _currentUser = authResponse.user;
 
@@ -233,6 +253,8 @@ class AuthService {
       // Ignore logout errors, just clear tokens
     } finally {
       await TokenService.clearTokens();
+      // Keep saved email for next login (auto remember me)
+      // await TokenService.clearSavedEmail(); // Uncomment to clear email on logout
       _currentUser = null;
     }
   }
@@ -252,6 +274,77 @@ class AuthService {
       await TokenService.clearTokens();
       _currentUser = null;
     }
+  }
+
+  /// Get device information for login/signup
+  Future<Map<String, String?>> _getDeviceInfo() async {
+    try {
+      final deviceInfoPlugin = DeviceInfoPlugin();
+      
+      if (kIsWeb) {
+        final webInfo = await deviceInfoPlugin.webBrowserInfo;
+        return {
+          'deviceId': 'web_${DateTime.now().millisecondsSinceEpoch}',
+          'deviceModel': '${webInfo.browserName} ${webInfo.platform}',
+          'platform': 'web',
+          'deviceName': webInfo.browserName.toString(),
+        };
+      } else {
+        final deviceData = await deviceInfoPlugin.deviceInfo;
+        
+        if (deviceData is AndroidDeviceInfo) {
+          return {
+            'deviceId': deviceData.id,
+            'deviceModel': '${deviceData.manufacturer} ${deviceData.model}',
+            'platform': 'android',
+            'deviceName': deviceData.model,
+          };
+        } else if (deviceData is IosDeviceInfo) {
+          return {
+            'deviceId': deviceData.identifierForVendor ?? 'unknown',
+            'deviceModel': deviceData.model,
+            'platform': 'ios',
+            'deviceName': deviceData.name,
+          };
+        } else if (deviceData is WindowsDeviceInfo) {
+          return {
+            'deviceId': deviceData.deviceId,
+            'deviceModel': deviceData.computerName,
+            'platform': 'windows',
+            'deviceName': deviceData.computerName,
+          };
+        } else if (deviceData is MacOsDeviceInfo) {
+          return {
+            'deviceId': deviceData.systemGUID ?? 'unknown',
+            'deviceModel': deviceData.model,
+            'platform': 'macos',
+            'deviceName': deviceData.computerName,
+          };
+        } else if (deviceData is LinuxDeviceInfo) {
+          return {
+            'deviceId': deviceData.machineId ?? 'unknown',
+            'deviceModel': deviceData.prettyName,
+            'platform': 'linux',
+            'deviceName': deviceData.name,
+          };
+        }
+      }
+    } catch (e) {
+      // Fallback if device info fails
+      return {
+        'deviceId': 'unknown_${DateTime.now().millisecondsSinceEpoch}',
+        'deviceModel': 'Unknown Device',
+        'platform': kIsWeb ? 'web' : 'unknown',
+        'deviceName': 'Unknown',
+      };
+    }
+    
+    return {
+      'deviceId': 'unknown',
+      'deviceModel': 'Unknown',
+      'platform': 'unknown',
+      'deviceName': 'Unknown',
+    };
   }
 
   void dispose() {
@@ -371,13 +464,34 @@ class CreateUserDto {
 class LoginDto {
   final String email;
   final String password;
+  final String? deviceId;
+  final String? deviceModel;
+  final String? platform;
+  final String? deviceName;
 
-  LoginDto({required this.email, required this.password});
+  LoginDto({
+    required this.email,
+    required this.password,
+    this.deviceId,
+    this.deviceModel,
+    this.platform,
+    this.deviceName,
+  });
 
-  Map<String, dynamic> toJson() => {
-        'email': email,
-        'password': password,
-      };
+  Map<String, dynamic> toJson() {
+    final json = {
+      'email': email,
+      'password': password,
+    };
+    
+    // Add device info if available
+    if (deviceId != null) json['deviceId'] = deviceId!;
+    if (deviceModel != null) json['deviceModel'] = deviceModel!;
+    if (platform != null) json['platform'] = platform!;
+    if (deviceName != null) json['deviceName'] = deviceName!;
+    
+    return json;
+  }
 }
 
 class AuthResponse {

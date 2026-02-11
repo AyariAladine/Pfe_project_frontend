@@ -12,17 +12,38 @@ import '../../widgets/custom_text_field.dart';
 import '../../widgets/language_selector.dart';
 import '../signup/signup_view.dart';
 import '../forgot_password/forgot_password_view.dart';
-import '../../home/home_view.dart';
+import '../../home/main_shell.dart';
 
-class LoginView extends StatelessWidget {
+class LoginView extends StatefulWidget {
   const LoginView({super.key});
 
   @override
+  State<LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<LoginView> {
+  late LoginViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = LoginViewModel();
+    // Load saved email for auto-fill
+    _viewModel.init();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => LoginViewModel(),
+    return ChangeNotifierProvider.value(
+      value: _viewModel,
       child: const _LoginViewContent(),
     );
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
   }
 }
 
@@ -350,7 +371,7 @@ class _LoginViewContent extends StatelessWidget {
                     if (success && context.mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const HomeView()),
+                        MaterialPageRoute(builder: (_) => const MainShell()),
                         (route) => false,
                       );
                     }
@@ -403,7 +424,7 @@ class _LoginViewContent extends StatelessWidget {
                       // User logged in successfully
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const HomeView()),
+                        MaterialPageRoute(builder: (_) => const MainShell()),
                         (route) => false,
                       );
                     } else if (result.needsRole) {
@@ -415,7 +436,7 @@ class _LoginViewContent extends StatelessWidget {
                           if (completeResult.success && context.mounted) {
                             Navigator.pushAndRemoveUntil(
                               context,
-                              MaterialPageRoute(builder: (_) => const HomeView()),
+                              MaterialPageRoute(builder: (_) => const MainShell()),
                               (route) => false,
                             );
                           }

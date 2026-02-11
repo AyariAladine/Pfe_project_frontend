@@ -12,7 +12,7 @@ import '../../widgets/custom_text_field.dart';
 import '../../widgets/language_selector.dart';
 import '../../widgets/user_type_card.dart';
 import '../../onboarding/onboarding_view.dart';
-import '../../home/home_view.dart';
+import '../../home/main_shell.dart';
 
 class SignupView extends StatelessWidget {
   const SignupView({super.key});
@@ -414,7 +414,7 @@ class _SignupViewContent extends StatelessWidget {
                 // User logged in successfully (existing user or new user with role already selected)
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => const HomeView()),
+                  MaterialPageRoute(builder: (_) => const MainShell()),
                   (route) => false,
                 );
               } else if (result.needsRole) {
@@ -426,7 +426,7 @@ class _SignupViewContent extends StatelessWidget {
                     if (completeResult.success && context.mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const HomeView()),
+                        MaterialPageRoute(builder: (_) => const MainShell()),
                         (route) => false,
                       );
                     }

@@ -113,6 +113,106 @@ class AppLocalizations {
       'noRecentActivity': 'لا يوجد نشاط حديث',
       'notificationsWillAppear': 'ستظهر هنا آخر الإشعارات والتحديثات',
 
+      // Property Actions
+      'view': 'عرض',
+      'edit': 'تعديل',
+      'delete': 'حذف',
+      'myProperties': 'عقاراتي',
+      'propertyDetails': 'تفاصيل العقار',
+      'location': 'الموقع',
+      'noImageAvailable': 'لا توجد صورة متاحة',
+      'propertyDeleted': 'تم حذف العقار',
+      'deleteProperty': 'حذف العقار',
+      'deletePropertyConfirm': 'هل أنت متأكد من حذف هذا العقار؟ لا يمكن التراجع عن هذا الإجراء.',
+      'forSale': 'للبيع',
+      'forRent': 'للإيجار',
+      'type': 'النوع',
+      'status': 'الحالة',
+      'locationNotSet': 'الموقع غير محدد',
+      'latitude': 'خط العرض',
+      'longitude': 'خط الطول',
+      'openInGoogleMaps': 'فتح في خرائط جوجل',
+      'propertyName': 'اسم العقار',
+      'address': 'العنوان',
+      'contractId': 'رقم العقد',
+      'documents': 'المستندات',
+      'registrationDocument': 'وثيقة التسجيل',
+      'uploaded': 'تم الرفع',
+      'created': 'تاريخ الإنشاء',
+      'updated': 'تاريخ التحديث',
+      'editProperty': 'تعديل العقار',
+      'propertyAddress': 'عنوان العقار',
+      'propertyType': 'نوع العقار',
+      'propertyStatus': 'حالة العقار',
+      'enterPropertyName': 'أدخل اسم العقار',
+      'enterPropertyAddress': 'أدخل عنوان العقار',
+      'enterFullAddress': 'أدخل العنوان الكامل',
+      'propertyNameRequired': 'اسم العقار مطلوب',
+      'propertyNameMinLength': 'اسم العقار يجب أن يكون 3 أحرف على الأقل',
+      'propertyAddressRequired': 'عنوان العقار مطلوب',
+      'available': 'متاح',
+      'unavailable': 'غير متاح',
+      'pending': 'قيد الانتظار',
+      'sold': 'مباع',
+      'rented': 'مؤجر',
+      'clear': 'مسح',
+      'selectOnMap': 'اختر على الخريطة',
+      'scan': 'مسح',
+      'upload': 'رفع',
+      'gallery': 'المعرض',
+      'camera': 'الكاميرا',
+      'continue': 'متابعة',
+      'continueText': 'متابعة',
+      'back': 'رجوع',
+      'saveChanges': 'حفظ التغييرات',
+      'createProperty': 'إنشاء عقار',
+      'propertyCreatedSuccessfully': 'تم إنشاء العقار بنجاح!',
+      'discardChanges': 'تجاهل التغييرات؟',
+      'discard': 'تجاهل',
+      'changeLocation': 'تغيير الموقع',
+      'chooseFromGalleryTitle': 'اختر من المعرض',
+      'selectMultiplePhotos': 'اختر عدة صور',
+      'takePhoto': 'التقاط صورة',
+      'useCameraToCapture': 'استخدم الكاميرا للتصوير',
+      'tapToChooseLocationVisually': 'انقر لاختيار الموقع بصرياً',
+      'enterCoordinates': 'إدخال الإحداثيات',
+      'inputLatLngManually': 'أدخل خط العرض والطول يدوياً',
+      'useCurrentLocation': 'استخدم الموقع الحالي',
+      'autoDetectCurrentPosition': 'كشف الموقع الحالي تلقائياً',
+      'estimateFromAddress': 'تقدير من العنوان',
+      'findLocationUsingAddress': 'ابحث عن الموقع باستخدام العنوان أعلاه',
+      'confirmLocation': 'تأكيد الموقع',
+      'latitudeHint': 'خط العرض (مثال: 36.8065)',
+      'longitudeHint': 'خط الطول (مثال: 10.1815)',
+      'saveLocation': 'حفظ الموقع',
+      'name': 'الاسم',
+      'photos': 'الصور',
+      'descriptionOptional': 'الوصف (اختياري)',
+      'addDetailedDescription': 'إضافة وصف تفصيلي...',
+      'basicInformation': 'المعلومات الأساسية',
+      'enterBasicDetails': 'أدخل التفاصيل الأساسية للعقار',
+      'propertyPhotos': 'صور العقار',
+      'addPhotosToShowcase': 'أضف صوراً لعرض العقار بشكل أفضل',
+      'mainPhoto': 'رئيسية',
+      'photosOptionalHint': 'يمكنك إضافة الصور لاحقاً من صفحة تفاصيل العقار',
+      'photosAdded': 'صورة مضافة',
+      'propertyLocation': 'موقع العقار',
+      'setExactLocation': 'حدد الموقع الدقيق للعقار',
+      'locationSet': 'تم تحديد الموقع',
+      'selectOnMapTitle': 'اختر على الخريطة',
+      'selectOnMapSubtitle': 'انقر لاختيار الموقع بصرياً',
+      'tapOnMapOrDrag': 'انقر على الخريطة أو اسحب الدبوس',
+      'selectedCoordinates': 'الإحداثيات المحددة',
+      'openInGoogleMapsShort': 'فتح في خرائط جوجل',
+      'enterCoordinatesTitle': 'إدخال الإحداثيات',
+      'locationOptionalHint': 'الموقع اختياري، يمكنك إضافته لاحقاً',
+      'notSet': 'غير محدد',
+      'reviewAndCreate': 'المراجعة والإنشاء',
+      'reviewPropertyDetails': 'راجع تفاصيل العقار قبل الإنشاء',
+      'propertySummary': 'ملخص العقار',
+      'selectLocation': 'اختر الموقع',
+      'tapOnMapOrDragPin': 'انقر على الخريطة أو اسحب الدبوس',
+
       // Theme
       'light': 'فاتح',
       'dark': 'داكن',
@@ -183,8 +283,6 @@ class AppLocalizations {
       'disabled': 'معطّل',
       'deviceRegistered': 'الجهاز المسجل',
       'goToHome': 'الذهاب للرئيسية',
-      'continueText': 'متابعة',
-      'back': 'رجوع',
     },
     'en': {
       // App
@@ -287,6 +385,105 @@ class AppLocalizations {
       'noRecentActivity': 'No recent activity',
       'notificationsWillAppear': 'Notifications and updates will appear here',
 
+      // Property Actions
+      'view': 'View',
+      'edit': 'Edit',
+      'delete': 'Delete',
+      'myProperties': 'My Properties',
+      'propertyDetails': 'Property Details',
+      'location': 'Location',
+      'noImageAvailable': 'No Image Available',
+      'propertyDeleted': 'Property deleted',
+      'deleteProperty': 'Delete Property',
+      'deletePropertyConfirm': 'Are you sure you want to delete this property? This action cannot be undone.',
+      'forSale': 'For Sale',
+      'forRent': 'For Rent',
+      'type': 'Type',
+      'status': 'Status',
+      'locationNotSet': 'Location not set',
+      'latitude': 'Latitude',
+      'longitude': 'Longitude',
+      'openInGoogleMaps': 'Open in Google Maps',
+      'propertyName': 'Property Name',
+      'address': 'Address',
+      'contractId': 'Contract ID',
+      'documents': 'Documents',
+      'registrationDocument': 'Registration Document',
+      'uploaded': 'Uploaded',
+      'created': 'Created',
+      'updated': 'Updated',
+      'editProperty': 'Edit Property',
+      'propertyAddress': 'Property Address',
+      'propertyType': 'Property Type',
+      'propertyStatus': 'Property Status',
+      'enterPropertyName': 'Enter property name',
+      'enterPropertyAddress': 'Enter property address',
+      'enterFullAddress': 'Enter full address',
+      'propertyNameRequired': 'Property name is required',
+      'propertyNameMinLength': 'Property name must be at least 3 characters',
+      'propertyAddressRequired': 'Property address is required',
+      'available': 'Available',
+      'unavailable': 'Unavailable',
+      'pending': 'Pending',
+      'sold': 'Sold',
+      'rented': 'Rented',
+      'clear': 'Clear',
+      'selectOnMap': 'Select on Map',
+      'scan': 'Scan',
+      'upload': 'Upload',
+      'gallery': 'Gallery',
+      'camera': 'Camera',
+      'continue': 'Continue',
+      'back': 'Back',
+      'saveChanges': 'Save Changes',
+      'createProperty': 'Create Property',
+      'propertyCreatedSuccessfully': 'Property created successfully!',
+      'discardChanges': 'Discard Changes?',
+      'discard': 'Discard',
+      'changeLocation': 'Change Location',
+      'chooseFromGalleryTitle': 'Choose from Gallery',
+      'selectMultiplePhotos': 'Select multiple photos',
+      'takePhoto': 'Take Photo',
+      'useCameraToCapture': 'Use camera to capture',
+      'tapToChooseLocationVisually': 'Tap to choose location visually',
+      'enterCoordinates': 'Enter Coordinates',
+      'inputLatLngManually': 'Input latitude and longitude manually',
+      'useCurrentLocation': 'Use Current Location',
+      'autoDetectCurrentPosition': 'Auto-detect your current position',
+      'estimateFromAddress': 'Estimate from Address',
+      'findLocationUsingAddress': 'Find location using the address above',
+      'confirmLocation': 'Confirm Location',
+      'latitudeHint': 'Latitude (e.g., 36.8065)',
+      'longitudeHint': 'Longitude (e.g., 10.1815)',
+      'saveLocation': 'Save Location',
+      'name': 'Name',
+      'photos': 'Photos',
+      'descriptionOptional': 'Description (Optional)',
+      'addDetailedDescription': 'Add a detailed description...',
+      'basicInformation': 'Basic Information',
+      'enterBasicDetails': 'Enter basic details about the property',
+      'propertyPhotos': 'Property Photos',
+      'addPhotosToShowcase': 'Add photos to showcase your property',
+      'mainPhoto': 'Main',
+      'photosOptionalHint': 'You can add photos later from property details',
+      'photosAdded': 'photos added',
+      'propertyLocation': 'Property Location',
+      'setExactLocation': 'Set the exact location of your property',
+      'locationSet': 'Location Set',
+      'selectOnMapTitle': 'Select on Map',
+      'selectOnMapSubtitle': 'Tap to choose location visually',
+      'tapOnMapOrDrag': 'Tap on map or drag the pin',
+      'selectedCoordinates': 'Selected Coordinates',
+      'openInGoogleMapsShort': 'Open in Google Maps',
+      'enterCoordinatesTitle': 'Enter Coordinates',
+      'locationOptionalHint': 'Location is optional, you can add it later',
+      'notSet': 'Not set',
+      'reviewAndCreate': 'Review & Create',
+      'reviewPropertyDetails': 'Review your property details before creating',
+      'propertySummary': 'Property Summary',
+      'selectLocation': 'Select Location',
+      'tapOnMapOrDragPin': 'Tap on map or drag the pin',
+
       // Theme
       'light': 'Light',
       'dark': 'Dark',
@@ -357,7 +554,6 @@ class AppLocalizations {
       'disabled': 'Disabled',
       'deviceRegistered': 'Device Registered',
       'goToHome': 'Go to Home',
-      'back': 'Back',
     },
     'fr': {
       // App
@@ -462,6 +658,104 @@ class AppLocalizations {
       'noRecentActivity': "Aucune activité récente",
       'notificationsWillAppear':
           'Les notifications et mises à jour apparaîtront ici',
+
+      // Property Actions
+      'view': 'Voir',
+      'edit': 'Modifier',
+      'delete': 'Supprimer',
+      'myProperties': 'Mes propriétés',
+      'propertyDetails': 'Détails de la propriété',
+      'location': 'Emplacement',
+      'noImageAvailable': 'Aucune image disponible',
+      'propertyDeleted': 'Propriété supprimée',
+      'deleteProperty': 'Supprimer la propriété',
+      'deletePropertyConfirm': 'Êtes-vous sûr de vouloir supprimer cette propriété? Cette action ne peut pas être annulée.',
+      'forSale': 'À vendre',
+      'forRent': 'À louer',
+      'type': 'Type',
+      'status': 'Statut',
+      'locationNotSet': 'Emplacement non défini',
+      'latitude': 'Latitude',
+      'longitude': 'Longitude',
+      'openInGoogleMaps': 'Ouvrir dans Google Maps',
+      'propertyName': 'Nom de la propriété',
+      'address': 'Adresse',
+      'contractId': 'ID du contrat',
+      'documents': 'Documents',
+      'registrationDocument': "Document d'enregistrement",
+      'uploaded': 'Téléchargé',
+      'created': 'Créé',
+      'updated': 'Mis à jour',
+      'editProperty': 'Modifier la propriété',
+      'propertyAddress': 'Adresse de la propriété',
+      'propertyType': 'Type de propriété',
+      'propertyStatus': 'Statut de la propriété',
+      'enterPropertyName': 'Entrez le nom de la propriété',
+      'enterPropertyAddress': 'Entrez l\'adresse de la propriété',
+      'enterFullAddress': 'Entrez l\'adresse complète',
+      'propertyNameRequired': 'Le nom de la propriété est requis',
+      'propertyNameMinLength': 'Le nom de la propriété doit contenir au moins 3 caractères',
+      'propertyAddressRequired': 'L\'adresse de la propriété est requise',
+      'available': 'Disponible',
+      'unavailable': 'Indisponible',
+      'pending': 'En attente',
+      'sold': 'Vendu',
+      'rented': 'Loué',
+      'clear': 'Effacer',
+      'selectOnMap': 'Sélectionner sur la carte',
+      'scan': 'Scanner',
+      'upload': 'Télécharger',
+      'gallery': 'Galerie',
+      'camera': 'Caméra',
+      'continue': 'Continuer',
+      'saveChanges': 'Enregistrer les modifications',
+      'createProperty': 'Créer une propriété',
+      'propertyCreatedSuccessfully': 'Propriété créée avec succès!',
+      'discardChanges': 'Abandonner les modifications?',
+      'discard': 'Abandonner',
+      'changeLocation': 'Changer l\'emplacement',
+      'chooseFromGalleryTitle': 'Choisir dans la galerie',
+      'selectMultiplePhotos': 'Sélectionner plusieurs photos',
+      'takePhoto': 'Prendre une photo',
+      'useCameraToCapture': 'Utiliser la caméra pour capturer',
+      'tapToChooseLocationVisually': 'Appuyez pour choisir l\'emplacement visuellement',
+      'enterCoordinates': 'Entrer les coordonnées',
+      'inputLatLngManually': 'Entrer manuellement la latitude et la longitude',
+      'useCurrentLocation': 'Utiliser l\'emplacement actuel',
+      'autoDetectCurrentPosition': 'Détecter automatiquement votre position actuelle',
+      'estimateFromAddress': 'Estimer depuis l\'adresse',
+      'findLocationUsingAddress': 'Trouver l\'emplacement en utilisant l\'adresse ci-dessus',
+      'confirmLocation': 'Confirmer l\'emplacement',
+      'latitudeHint': 'Latitude (ex: 36.8065)',
+      'longitudeHint': 'Longitude (ex: 10.1815)',
+      'saveLocation': 'Enregistrer l\'emplacement',
+      'name': 'Nom',
+      'photos': 'Photos',
+      'descriptionOptional': 'Description (Optionnel)',
+      'addDetailedDescription': 'Ajouter une description détaillée...',
+      'basicInformation': 'Informations de base',
+      'enterBasicDetails': 'Entrez les détails de base de la propriété',
+      'propertyPhotos': 'Photos de la propriété',
+      'addPhotosToShowcase': 'Ajoutez des photos pour présenter votre propriété',
+      'mainPhoto': 'Principale',
+      'photosOptionalHint': 'Vous pouvez ajouter des photos plus tard depuis les détails',
+      'photosAdded': 'photos ajoutées',
+      'propertyLocation': 'Emplacement de la propriété',
+      'setExactLocation': 'Définir l\'emplacement exact de votre propriété',
+      'locationSet': 'Emplacement défini',
+      'selectOnMapTitle': 'Sélectionner sur la carte',
+      'selectOnMapSubtitle': 'Appuyez pour choisir l\'emplacement visuellement',
+      'tapOnMapOrDrag': 'Appuyez sur la carte ou faites glisser l\'épingle',
+      'selectedCoordinates': 'Coordonnées sélectionnées',
+      'openInGoogleMapsShort': 'Ouvrir dans Google Maps',
+      'enterCoordinatesTitle': 'Entrer les coordonnées',
+      'locationOptionalHint': 'L\'emplacement est facultatif, vous pouvez l\'ajouter plus tard',
+      'notSet': 'Non défini',
+      'reviewAndCreate': 'Réviser et créer',
+      'reviewPropertyDetails': 'Vérifiez les détails avant de créer',
+      'propertySummary': 'Résumé de la propriété',
+      'selectLocation': 'Sélectionner l\'emplacement',
+      'tapOnMapOrDragPin': 'Appuyez sur la carte ou faites glisser l\'épingle',
 
       // Theme
       'light': 'Clair',
@@ -663,6 +957,7 @@ class AppLocalizations {
   // Onboarding Getters
   String get verifyIdentity => translate('verifyIdentity');
   String get verifyIdentityDesc => translate('verifyIdentityDesc');
+  String get verifyIdentitySubtitle => translate('verifyIdentitySubtitle');
   String get getStarted => translate('getStarted');
   String get scanCin => translate('scanCin');
   String get scanCinDesc => translate('scanCinDesc');
@@ -693,6 +988,103 @@ class AppLocalizations {
   String get deviceRegistered => translate('deviceRegistered');
   String get goToHome => translate('goToHome');
   String get back => translate('back');
+
+  // Property Actions Getters
+  String get view => translate('view');
+  String get edit => translate('edit');
+  String get delete => translate('delete');
+  String get myProperties => translate('myProperties');
+  String get propertyDetails => translate('propertyDetails');
+  String get location => translate('location');
+  String get noImageAvailable => translate('noImageAvailable');
+  String get propertyDeleted => translate('propertyDeleted');
+  String get deleteProperty => translate('deleteProperty');
+  String get deletePropertyConfirm => translate('deletePropertyConfirm');
+  String get forSale => translate('forSale');
+  String get forRent => translate('forRent');
+  String get type => translate('type');
+  String get status => translate('status');
+  String get locationNotSet => translate('locationNotSet');
+  String get latitude => translate('latitude');
+  String get longitude => translate('longitude');
+  String get openInGoogleMaps => translate('openInGoogleMaps');
+  String get propertyName => translate('propertyName');
+  String get address => translate('address');
+  String get contractId => translate('contractId');
+  String get documents => translate('documents');
+  String get registrationDocument => translate('registrationDocument');
+  String get uploaded => translate('uploaded');
+  String get created => translate('created');
+  String get updated => translate('updated');
+  String get editProperty => translate('editProperty');
+  String get propertyAddress => translate('propertyAddress');
+  String get propertyType => translate('propertyType');
+  String get propertyStatus => translate('propertyStatus');
+  String get enterPropertyName => translate('enterPropertyName');
+  String get enterPropertyAddress => translate('enterPropertyAddress');
+  String get enterFullAddress => translate('enterFullAddress');
+  String get propertyNameRequired => translate('propertyNameRequired');
+  String get propertyNameMinLength => translate('propertyNameMinLength');
+  String get propertyAddressRequired => translate('propertyAddressRequired');
+  String get available => translate('available');
+  String get unavailable => translate('unavailable');
+  String get pending => translate('pending');
+  String get sold => translate('sold');
+  String get rented => translate('rented');
+  String get clear => translate('clear');
+  String get selectOnMap => translate('selectOnMap');
+  String get scan => translate('scan');
+  String get upload => translate('upload');
+  String get gallery => translate('gallery');
+  String get camera => translate('camera');
+  String get saveChanges => translate('saveChanges');
+  String get createProperty => translate('createProperty');
+  String get propertyCreatedSuccessfully => translate('propertyCreatedSuccessfully');
+  String get discardChanges => translate('discardChanges');
+  String get discard => translate('discard');
+  String get changeLocation => translate('changeLocation');
+  String get chooseFromGalleryTitle => translate('chooseFromGalleryTitle');
+  String get selectMultiplePhotos => translate('selectMultiplePhotos');
+  String get takePhoto => translate('takePhoto');
+  String get useCameraToCapture => translate('useCameraToCapture');
+  String get tapToChooseLocationVisually => translate('tapToChooseLocationVisually');
+  String get enterCoordinates => translate('enterCoordinates');
+  String get inputLatLngManually => translate('inputLatLngManually');
+  String get useCurrentLocation => translate('useCurrentLocation');
+  String get autoDetectCurrentPosition => translate('autoDetectCurrentPosition');
+  String get estimateFromAddress => translate('estimateFromAddress');
+  String get findLocationUsingAddress => translate('findLocationUsingAddress');
+  String get confirmLocation => translate('confirmLocation');
+  String get latitudeHint => translate('latitudeHint');
+  String get longitudeHint => translate('longitudeHint');
+  String get saveLocation => translate('saveLocation');
+  String get name => translate('name');
+  String get photos => translate('photos');
+  String get descriptionOptional => translate('descriptionOptional');
+  String get addDetailedDescription => translate('addDetailedDescription');
+  String get basicInformation => translate('basicInformation');
+  String get enterBasicDetails => translate('enterBasicDetails');
+  String get propertyPhotos => translate('propertyPhotos');
+  String get addPhotosToShowcase => translate('addPhotosToShowcase');
+  String get mainPhoto => translate('mainPhoto');
+  String get photosOptionalHint => translate('photosOptionalHint');
+  String get photosAdded => translate('photosAdded');
+  String get propertyLocation => translate('propertyLocation');
+  String get setExactLocation => translate('setExactLocation');
+  String get locationSet => translate('locationSet');
+  String get selectOnMapTitle => translate('selectOnMapTitle');
+  String get selectOnMapSubtitle => translate('selectOnMapSubtitle');
+  String get tapOnMapOrDrag => translate('tapOnMapOrDrag');
+  String get selectedCoordinates => translate('selectedCoordinates');
+  String get openInGoogleMapsShort => translate('openInGoogleMapsShort');
+  String get enterCoordinatesTitle => translate('enterCoordinatesTitle');
+  String get locationOptionalHint => translate('locationOptionalHint');
+  String get notSet => translate('notSet');
+  String get reviewAndCreate => translate('reviewAndCreate');
+  String get reviewPropertyDetails => translate('reviewPropertyDetails');
+  String get propertySummary => translate('propertySummary');
+  String get selectLocation => translate('selectLocation');
+  String get tapOnMapOrDragPin => translate('tapOnMapOrDragPin');
 }
 
 class _AppLocalizationsDelegate
