@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:pfe_project/views/home/home_view.dart';
+import 'package:pfe_project/views/home/main_shell.dart';
 import 'package:pfe_project/views/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
@@ -608,7 +608,7 @@ class _CompleteStep extends StatelessWidget {
               
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const HomeView()),
+                MaterialPageRoute(builder: (_) => const MainShell()),
                 (route) => false,
               );
             },

@@ -6,8 +6,6 @@ import '../../models/property_model.dart';
 import '../../viewmodels/property/property_list_viewmodel.dart';
 import '../widgets/network_image_with_auth.dart';
 import 'create_property_wizard_view.dart';
-import 'property_detail_view.dart';
-import 'edit_property_view.dart';
 
 /// Standalone Property List View with its own Scaffold
 class PropertyListView extends StatefulWidget {
@@ -100,7 +98,10 @@ class _PropertyListViewContent extends StatelessWidget {
 
 /// Property List Content that can be embedded in a shell (no Scaffold)
 class PropertyListContent extends StatefulWidget {
-  const PropertyListContent({super.key});
+  final void Function(PropertyModel property)? onPropertySelected;
+  final void Function(PropertyModel property)? onEditProperty;
+
+  const PropertyListContent({super.key, this.onPropertySelected, this.onEditProperty});
 
   @override
   State<PropertyListContent> createState() => _PropertyListContentState();
@@ -126,13 +127,19 @@ class _PropertyListContentState extends State<PropertyListContent> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _viewModel,
-      child: const _PropertyListBody(),
+      child: _PropertyListBody(
+        onPropertySelected: widget.onPropertySelected,
+        onEditProperty: widget.onEditProperty,
+      ),
     );
   }
 }
 
 class _PropertyListBody extends StatelessWidget {
-  const _PropertyListBody();
+  final void Function(PropertyModel property)? onPropertySelected;
+  final void Function(PropertyModel property)? onEditProperty;
+
+  const _PropertyListBody({this.onPropertySelected, this.onEditProperty});
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +147,8 @@ class _PropertyListBody extends StatelessWidget {
 
     return Stack(
       children: [
-            Consumer<PropertyListViewModel>(
+        Positioned.fill(
+          child: Consumer<PropertyListViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -156,36 +164,84 @@ class _PropertyListBody extends StatelessWidget {
 
                 return RefreshIndicator(
                   onRefresh: viewModel.refresh,
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    itemCount: viewModel.properties.length,
-                    itemBuilder: (context, index) {
-                      final property = viewModel.properties[index];
-                      return _PropertyCard(
-                        property: property,
-                        isDark: isDark,
-                        onTap: () =>
-                            _navigateToDetail(context, viewModel, property),
-                        onEdit: () => _navigateToEdit(context, viewModel, property),
-                        onDelete: () =>
-                            _confirmDelete(context, viewModel, property),
-                      );
-                    },
-                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 100),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final rentalProperties = viewModel.properties
+                            .where((p) => p.propertyType == PropertyType.rent)
+                            .toList();
+                        final saleProperties = viewModel.properties
+                            .where((p) => p.propertyType == PropertyType.sale)
+                            .toList();
+
+                        // Mobile layout - single column with all properties
+                        if (constraints.maxWidth < 600) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: viewModel.properties.map((property) {
+                              return _PropertyCard(
+                                property: property,
+                                isDark: isDark,
+                                onTap: () => _navigateToDetail(context, viewModel, property),
+                                onEdit: () => _navigateToEdit(context, viewModel, property),
+                                onDelete: () => _confirmDelete(context, viewModel, property),
+                              );
+                            }).toList(),
+                          );
+                        }
+
+                        // Desktop layout - two columns
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Left column - Rentals
+                            Expanded(
+                              child: _PropertyColumn(
+                                title: AppLocalizations.of(context)!.forRent,
+                                properties: rentalProperties,
+                                isDark: isDark,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                                onPropertyTap: (property) =>
+                                    _navigateToDetail(context, viewModel, property),
+                                onPropertyEdit: (property) =>
+                                    _navigateToEdit(context, viewModel, property),
+                                onPropertyDelete: (property) =>
+                                    _confirmDelete(context, viewModel, property),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // Right column - Sales
+                            Expanded(
+                              child: _PropertyColumn(
+                                title: AppLocalizations.of(context)!.forSale,
+                                properties: saleProperties,
+                                isDark: isDark,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                                onPropertyTap: (property) =>
+                                    _navigateToDetail(context, viewModel, property),
+                                onPropertyEdit: (property) =>
+                                    _navigateToEdit(context, viewModel, property),
+                                onPropertyDelete: (property) =>
+                                    _confirmDelete(context, viewModel, property),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 );
               },
             ),
+          ),
             Positioned(
               bottom: 16,
               right: 16,
               child: FloatingActionButton.extended(
                 onPressed: () => _navigateToCreate(context),
                 backgroundColor: AppColors.primary,
+                elevation: 4,
                 icon: const Icon(Icons.add, color: Colors.white),
                 label: const Text(
                   'Add Property',
@@ -338,50 +394,16 @@ class _PropertyListBody extends StatelessWidget {
     BuildContext context,
     PropertyListViewModel viewModel,
     PropertyModel property,
-  ) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PropertyDetailView(property: property),
-      ),
-    );
-
-    if (result != null && context.mounted) {
-      if (result == 'delete' && property.id != null) {
-        final success = await viewModel.deleteProperty(property.id!);
-        if (success && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)!.propertyDeleted),
-              backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        }
-      } else if (result is PropertyModel) {
-        viewModel.updateProperty(result);
-      }
-    }
+  ) {
+    onPropertySelected?.call(property);
   }
 
   void _navigateToEdit(
     BuildContext context,
     PropertyListViewModel viewModel,
     PropertyModel property,
-  ) async {
-    final result = await Navigator.push<PropertyModel>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditPropertyView(property: property),
-      ),
-    );
-
-    if (result != null && context.mounted) {
-      viewModel.updateProperty(result);
-    }
+  ) {
+    onEditProperty?.call(property);
   }
 
   void _confirmDelete(
@@ -505,6 +527,113 @@ class _PropertyListBody extends StatelessWidget {
   }
 }
 
+class _PropertyColumn extends StatelessWidget {
+  final String title;
+  final List<PropertyModel> properties;
+  final bool isDark;
+  final Color color;
+  final void Function(PropertyModel) onPropertyTap;
+  final void Function(PropertyModel) onPropertyEdit;
+  final void Function(PropertyModel) onPropertyDelete;
+
+  const _PropertyColumn({
+    required this.title,
+    required this.properties,
+    required this.isDark,
+    required this.color,
+    required this.onPropertyTap,
+    required this.onPropertyEdit,
+    required this.onPropertyDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Column header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.home_outlined, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${properties.length}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Properties list
+        if (properties.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.home_outlined,
+                    size: 48,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No properties',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...properties.map((property) => _PropertyCard(
+                property: property,
+                isDark: isDark,
+                onTap: () => onPropertyTap(property),
+                onEdit: () => onPropertyEdit(property),
+                onDelete: () => onPropertyDelete(property),
+              )),
+      ],
+    );
+  }
+}
+
 class _PropertyCard extends StatelessWidget {
   final PropertyModel property;
   final bool isDark;
@@ -548,12 +677,12 @@ class _PropertyCard extends StatelessWidget {
               ),
               child: SizedBox(
                 width: 120,
-                height: 130,
+                height: 140,
                 child: property.imageUrl != null
                     ? NetworkImageWithAuth(
                         imageUrl: property.imageUrl!,
                         width: 120,
-                        height: 130,
+                        height: 140,
                         fit: BoxFit.cover,
                         placeholder: () => _buildImagePlaceholder(),
                         errorBuilder: () => _buildImagePlaceholder(),
@@ -596,7 +725,7 @@ class _PropertyCard extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.location_on_outlined,
-                          size: 16,
+                          size: 14,
                           color: isDark
                               ? AppColors.textPrimaryDark
                               : AppColors.textPrimary,
@@ -606,8 +735,8 @@ class _PropertyCard extends StatelessWidget {
                           child: Text(
                             property.propertyAddress,
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                               color: isDark
                                   ? AppColors.textPrimaryDark
                                   : AppColors.textPrimary,
@@ -659,7 +788,7 @@ class _PropertyCard extends StatelessWidget {
   Widget _buildImagePlaceholder() {
     return Container(
       width: 120,
-      height: 130,
+      height: 140,
       color: (isDark ? AppColors.surfaceDark : AppColors.surface),
       child: Center(
         child: Container(
@@ -682,7 +811,7 @@ class _PropertyCard extends StatelessWidget {
 
   Widget _buildSmallBadge(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -690,7 +819,7 @@ class _PropertyCard extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -715,7 +844,7 @@ class _PropertyCard extends StatelessWidget {
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 18, color: color),
+          child: Icon(icon, size: 16, color: color),
         ),
       ),
     );

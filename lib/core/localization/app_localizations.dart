@@ -46,6 +46,7 @@ class AppLocalizations {
       'landlord': 'مالك عقار',
       'tenant': 'مستأجر',
       'lawyer': 'محامي',
+      'user': 'مستخدم',
       'agreeToTerms': 'بالمتابعة، أنت توافق على',
       'termsOfService': 'شروط الخدمة',
       'and': 'و',
@@ -78,11 +79,13 @@ class AppLocalizations {
       'landlordDescription': 'إدارة العقارات والإيجارات والعقود',
       'tenantDescription': 'البحث عن عقارات وإدارة عقود الإيجار',
       'lawyerDescription': 'تقديم الخدمات القانونية والاستشارات',
+      'userDescription': 'تصفح العقارات وإدارة العقود',
 
       // User Types Descriptions
       'landlordDesc': 'إدارة العقارات والعقود',
       'tenantDesc': 'البحث عن عقار والتأجير',
       'lawyerDesc': 'إدارة القضايا والاستشارات',
+      'userDesc': 'تصفح العقارات وإدارة العقود',
 
       // OCR
       'scanIdCard': 'مسح بطاقة الهوية',
@@ -317,6 +320,7 @@ class AppLocalizations {
       'landlord': 'Landlord',
       'tenant': 'Tenant',
       'lawyer': 'Lawyer',
+      'user': 'User',
       'continueText': 'Continue',
       'agreeToTerms': 'By continuing, you agree to our',
       'termsOfService': 'Terms of Service',
@@ -350,11 +354,13 @@ class AppLocalizations {
       'landlordDescription': 'Manage properties, rentals, and contracts',
       'tenantDescription': 'Find properties and manage rental agreements',
       'lawyerDescription': 'Provide legal services and consultations',
+      'userDescription': 'Browse properties and manage contracts',
 
       // User Types Descriptions
       'landlordDesc': 'Manage properties and contracts',
       'tenantDesc': 'Find and rent properties',
       'lawyerDesc': 'Manage cases and consultations',
+      'userDesc': 'Browse properties and manage contracts',
 
       // OCR
       'scanIdCard': 'Scan ID Card',
@@ -589,6 +595,7 @@ class AppLocalizations {
       'landlord': 'Propriétaire',
       'tenant': 'Locataire',
       'lawyer': 'Avocat',
+      'user': 'Utilisateur',
       'continueText': 'Continuer',
       'agreeToTerms': 'En continuant, vous acceptez nos',
       'termsOfService': "Conditions d'utilisation",
@@ -623,11 +630,13 @@ class AppLocalizations {
       'landlordDescription': 'Gérer les propriétés, les locations et les contrats',
       'tenantDescription': 'Trouver des propriétés et gérer les contrats de location',
       'lawyerDescription': 'Fournir des services juridiques et des consultations',
+      'userDescription': 'Parcourir les propriétés et gérer les contrats',
 
       // User Types Descriptions
       'landlordDesc': 'Gérer les propriétés et les contrats',
       'tenantDesc': 'Trouver et louer des propriétés',
       'lawyerDesc': 'Gérer les affaires et les consultations',
+      'userDesc': 'Parcourir les propriétés et gérer les contrats',
 
       // OCR
       'scanIdCard': "Scanner la carte d'identité",

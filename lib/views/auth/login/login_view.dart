@@ -594,19 +594,11 @@ Future<UserRole?> _showRoleSelectionDialog(BuildContext context, AppLocalization
             ),
             const SizedBox(height: 24),
             _RoleSelectionTile(
-              role: UserRole.landlord,
-              icon: Icons.home_work_outlined,
-              title: l10n.translate('landlord'),
-              description: l10n.translate('landlordDescription'),
-              onTap: () => Navigator.of(context).pop(UserRole.landlord),
-            ),
-            const SizedBox(height: 12),
-            _RoleSelectionTile(
-              role: UserRole.tenant,
+              role: UserRole.user,
               icon: Icons.person_outline,
-              title: l10n.translate('tenant'),
-              description: l10n.translate('tenantDescription'),
-              onTap: () => Navigator.of(context).pop(UserRole.tenant),
+              title: l10n.translate('user'),
+              description: l10n.translate('userDescription'),
+              onTap: () => Navigator.of(context).pop(UserRole.user),
             ),
             const SizedBox(height: 12),
             _RoleSelectionTile(

@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../models/property_model.dart';
 import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../widgets/language_selector.dart';
 import '../auth/login/login_view.dart';
 import '../onboarding/onboarding_view.dart';
 import '../property/property_list_view.dart';
+import '../property/property_detail_view.dart';
+import '../property/edit_property_view.dart';
 import '../property/create_property_wizard_view.dart';
 import 'home_content.dart';
 
@@ -38,6 +41,8 @@ class _MainShellState extends State<MainShell>
   late AnimationController _animController;
   late Animation<double> _slideAnimation;
   int _propertyListRefreshKey = 0; // Key to force property list refresh
+  PropertyModel? _selectedProperty; // Currently selected property for detail view
+  PropertyModel? _editingProperty; // Currently editing property
 
   @override
   void initState() {
@@ -70,6 +75,8 @@ class _MainShellState extends State<MainShell>
   void _navigateTo(NavItem item) {
     setState(() {
       _currentPage = item;
+      _selectedProperty = null; // Clear detail view when switching pages
+      _editingProperty = null; // Clear edit view when switching pages
     });
     // On narrow screens / mobile close the drawer; on wide web the sidebar stays open
     final isWideScreen = kIsWeb && MediaQuery.of(context).size.width >= 768;
@@ -156,6 +163,12 @@ class _MainShellState extends State<MainShell>
       case NavItem.home:
         return l10n.appName;
       case NavItem.properties:
+        if (_editingProperty != null) {
+          return l10n.editProperty;
+        }
+        if (_selectedProperty != null) {
+          return l10n.propertyDetails;
+        }
         return l10n.properties;
       case NavItem.addProperty:
         return l10n.addProperty;
@@ -175,8 +188,54 @@ class _MainShellState extends State<MainShell>
       case NavItem.home:
         return const HomeContent();
       case NavItem.properties:
+        if (_editingProperty != null) {
+          return EditPropertyContent(
+            property: _editingProperty!,
+            onBack: () {
+              setState(() {
+                _editingProperty = null;
+              });
+            },
+            onPropertyUpdated: (updated) {
+              setState(() {
+                _editingProperty = null;
+                _selectedProperty = updated;
+                _propertyListRefreshKey++;
+              });
+            },
+          );
+        }
+        if (_selectedProperty != null) {
+          return PropertyDetailContent(
+            property: _selectedProperty!,
+            onBack: () => setState(() => _selectedProperty = null),
+            onPropertyUpdated: (updated) {
+              setState(() {
+                _selectedProperty = updated;
+                _propertyListRefreshKey++;
+              });
+            },
+            onPropertyDeleted: (id) {
+              setState(() {
+                _selectedProperty = null;
+                _propertyListRefreshKey++;
+              });
+            },
+            onEditProperty: (property) {
+              setState(() => _editingProperty = property);
+            },
+          );
+        }
         // Use a key that changes to force rebuild and refresh data
-        return PropertyListContent(key: ValueKey(_propertyListRefreshKey));
+        return PropertyListContent(
+          key: ValueKey(_propertyListRefreshKey),
+          onPropertySelected: (property) {
+            setState(() => _selectedProperty = property);
+          },
+          onEditProperty: (property) {
+            setState(() => _editingProperty = property);
+          },
+        );
       case NavItem.addProperty:
         return CreatePropertyWizardContent(
           onPropertyCreated: (property) {

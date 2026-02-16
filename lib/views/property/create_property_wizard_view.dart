@@ -44,7 +44,6 @@ class _CreatePropertyWizardViewState extends State<CreatePropertyWizardView> {
   }
 }
 
-/// Content version (no Scaffold) - for embedding in MainShell with drawer
 class CreatePropertyWizardContent extends StatefulWidget {
   final Function(PropertyModel)? onPropertyCreated;
 

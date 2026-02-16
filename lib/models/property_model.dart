@@ -105,7 +105,7 @@ class PropertyModel {
     // or just filenames (e.g., xxx.jpg)
     if (propertyImage!.startsWith('/')) {
       // Remove leading slash and build full URL
-      return '${ApiConstants.baseUrl}${propertyImage}';
+      return '${ApiConstants.baseUrl}$propertyImage';
     }
     
     // Just a filename - construct full path

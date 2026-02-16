@@ -1,14 +1,13 @@
 /// User roles matching backend enum
-enum UserRole { landlord, tenant, lawyer }
+/// LANDLORD and TENANT are NOT static roles - they depend on case involvement
+enum UserRole { user, lawyer }
 
-/// Extension for UserRole to get display names in Arabic
+/// Extension for UserRole to get display names
 extension UserRoleExtension on UserRole {
   String get displayNameAr {
     switch (this) {
-      case UserRole.landlord:
-        return 'مالك';
-      case UserRole.tenant:
-        return 'مستأجر';
+      case UserRole.user:
+        return 'مستخدم';
       case UserRole.lawyer:
         return 'محامي';
     }
@@ -16,10 +15,8 @@ extension UserRoleExtension on UserRole {
 
   String get displayNameEn {
     switch (this) {
-      case UserRole.landlord:
-        return 'Landlord';
-      case UserRole.tenant:
-        return 'Tenant';
+      case UserRole.user:
+        return 'User';
       case UserRole.lawyer:
         return 'Lawyer';
     }
@@ -27,10 +24,8 @@ extension UserRoleExtension on UserRole {
 
   String get displayNameFr {
     switch (this) {
-      case UserRole.landlord:
-        return 'Propriétaire';
-      case UserRole.tenant:
-        return 'Locataire';
+      case UserRole.user:
+        return 'Utilisateur';
       case UserRole.lawyer:
         return 'Avocat';
     }
@@ -101,11 +96,11 @@ class UserModel {
 
   /// Parse role from string
   static UserRole _parseRole(dynamic role) {
-    if (role == null) return UserRole.tenant;
+    if (role == null) return UserRole.user;
     final roleStr = role.toString().toLowerCase();
     return UserRole.values.firstWhere(
       (e) => e.name.toLowerCase() == roleStr,
-      orElse: () => UserRole.tenant,
+      orElse: () => UserRole.user,
     );
   }
 

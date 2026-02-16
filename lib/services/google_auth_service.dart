@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import '../core/constants/api_constants.dart';
 import '../models/user_model.dart';
 import 'api_service.dart';
@@ -189,9 +188,6 @@ class GoogleAuthService {
     bool isWeb = false,
   }) async {
     try {
-      // Collect device information
-      final deviceInfo = await _getDeviceInfo();
-      
       // ⭐ CRITICAL FIX: Build request body correctly based on platform
       final Map<String, dynamic> body = {};
 
@@ -217,12 +213,6 @@ class GoogleAuthService {
         body['role'] = role.name;
         debugPrint('🎭 Role included: ${role.name}');
       }
-      
-      // Add device information
-      if (deviceInfo['deviceId'] != null) body['deviceId'] = deviceInfo['deviceId'];
-      if (deviceInfo['deviceModel'] != null) body['deviceModel'] = deviceInfo['deviceModel'];
-      if (deviceInfo['platform'] != null) body['platform'] = deviceInfo['platform'];
-      if (deviceInfo['deviceName'] != null) body['deviceName'] = deviceInfo['deviceName'];
 
       debugPrint('📤 Sending Google auth request to backend...');
       debugPrint('📝 Request body keys: ${body.keys.join(", ")}');
@@ -307,77 +297,6 @@ class GoogleAuthService {
     } catch (e) {
       debugPrint('❌ Google disconnect error: $e');
     }
-  }
-  
-  /// Get device information for Google auth
-  Future<Map<String, String?>> _getDeviceInfo() async {
-    try {
-      final deviceInfoPlugin = DeviceInfoPlugin();
-      
-      if (kIsWeb) {
-        final webInfo = await deviceInfoPlugin.webBrowserInfo;
-        return {
-          'deviceId': 'web_${DateTime.now().millisecondsSinceEpoch}',
-          'deviceModel': '${webInfo.browserName} ${webInfo.platform}',
-          'platform': 'web',
-          'deviceName': webInfo.browserName.toString(),
-        };
-      } else {
-        final deviceData = await deviceInfoPlugin.deviceInfo;
-        
-        if (deviceData is AndroidDeviceInfo) {
-          return {
-            'deviceId': deviceData.id,
-            'deviceModel': '${deviceData.manufacturer} ${deviceData.model}',
-            'platform': 'android',
-            'deviceName': deviceData.model,
-          };
-        } else if (deviceData is IosDeviceInfo) {
-          return {
-            'deviceId': deviceData.identifierForVendor ?? 'unknown',
-            'deviceModel': deviceData.model,
-            'platform': 'ios',
-            'deviceName': deviceData.name,
-          };
-        } else if (deviceData is WindowsDeviceInfo) {
-          return {
-            'deviceId': deviceData.deviceId,
-            'deviceModel': deviceData.computerName,
-            'platform': 'windows',
-            'deviceName': deviceData.computerName,
-          };
-        } else if (deviceData is MacOsDeviceInfo) {
-          return {
-            'deviceId': deviceData.systemGUID ?? 'unknown',
-            'deviceModel': deviceData.model,
-            'platform': 'macos',
-            'deviceName': deviceData.computerName,
-          };
-        } else if (deviceData is LinuxDeviceInfo) {
-          return {
-            'deviceId': deviceData.machineId ?? 'unknown',
-            'deviceModel': deviceData.prettyName,
-            'platform': 'linux',
-            'deviceName': deviceData.name,
-          };
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Error getting device info: $e');
-      return {
-        'deviceId': 'unknown_${DateTime.now().millisecondsSinceEpoch}',
-        'deviceModel': 'Unknown Device',
-        'platform': kIsWeb ? 'web' : 'unknown',
-        'deviceName': 'Unknown',
-      };
-    }
-    
-    return {
-      'deviceId': 'unknown',
-      'deviceModel': 'Unknown',
-      'platform': 'unknown',
-      'deviceName': 'Unknown',
-    };
   }
 }
 
