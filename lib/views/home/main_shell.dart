@@ -12,6 +12,7 @@ import '../property/property_list_view.dart';
 import '../property/property_detail_view.dart';
 import '../property/edit_property_view.dart';
 import '../property/create_property_wizard_view.dart';
+import 'ai_assistant_view.dart';
 import 'home_content.dart';
 
 /// Navigation items enum
@@ -251,7 +252,7 @@ class _MainShellState extends State<MainShell>
       case NavItem.cases:
         return _buildPlaceholder('Cases', Icons.gavel_rounded);
       case NavItem.aiAssistant:
-        return _buildPlaceholder('AI Assistant', Icons.smart_toy_rounded);
+        return const AiAssistantContent();
       case NavItem.settings:
         return _buildPlaceholder('Settings', Icons.settings_rounded);
     }
