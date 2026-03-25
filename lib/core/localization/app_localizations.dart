@@ -103,8 +103,19 @@ class AppLocalizations {
       'contracts': 'العقود',
       'cases': 'القضايا',
       'aiAssistant': 'المساعد الذكي',
+      'mapView': 'عرض الخريطة',
+      'listView': 'عرض القائمة',
+      'propertiesOnMap': 'عقارات على الخريطة',
+      'conversationRestored': 'تم استعادة المحادثة',
       'settings': 'الإعدادات',
       'logout': 'تسجيل الخروج',
+      'logoutConfirm': 'تسجيل الخروج؟',
+      'logoutMessage': 'هل أنت متأكد أنك تريد تسجيل الخروج؟',
+      'noPropertiesYet': 'لا توجد عقارات بعد',
+      'addFirstProperty': 'أضف عقارك الأول لبدء إدارة محفظتك العقارية',
+      'clearConversation': 'مسح المحادثة؟',
+      'clearConversationMessage': 'سيتم حذف جميع الرسائل نهائياً.',
+      'clearAction': 'مسح',
       'welcomeToAqari': 'مرحباً بك في عقاري',
       'managePropertiesEasily': 'إدارة عقاراتك بكل سهولة',
       'quickActions': 'الإجراءات السريعة',
@@ -120,6 +131,7 @@ class AppLocalizations {
       'view': 'عرض',
       'edit': 'تعديل',
       'delete': 'حذف',
+      'share': 'مشاركة',
       'myProperties': 'عقاراتي',
       'propertyDetails': 'تفاصيل العقار',
       'location': 'الموقع',
@@ -129,6 +141,9 @@ class AppLocalizations {
       'deletePropertyConfirm': 'هل أنت متأكد من حذف هذا العقار؟ لا يمكن التراجع عن هذا الإجراء.',
       'forSale': 'للبيع',
       'forRent': 'للإيجار',
+      'availableProperties': 'العقارات المتاحة',
+      'noOwnedProperties': 'لا تملك عقارات بعد',
+      'noAvailableProperties': 'لا توجد عقارات متاحة حالياً',
       'type': 'النوع',
       'status': 'الحالة',
       'locationNotSet': 'الموقع غير محدد',
@@ -286,6 +301,118 @@ class AppLocalizations {
       'disabled': 'معطّل',
       'deviceRegistered': 'الجهاز المسجل',
       'goToHome': 'الذهاب للرئيسية',
+      'verifyPhone': 'تحقق من رقم هاتفك',
+      'verifyPhoneDesc': 'سنرسل رمز تحقق إلى رقم هاتفك المسجل',
+      'phoneVerified': 'تم التحقق من الهاتف',
+      'enterOtpCode': 'أدخل الرمز المكون من 6 أرقام',
+      'verifyCode': 'تحقق من الرمز',
+      'sendVerificationCode': 'إرسال رمز التحقق',
+      'resendCode': 'إعادة إرسال الرمز',
+      'unlockToAccess': 'يرجى فتح القفل للوصول إلى التطبيق',
+      'unlockApp': 'فتح القفل',
+
+      // Lawyers
+      'lawyers': 'المحامون',
+      'searchLawyers': 'البحث عن محامٍ...',
+      'lawyersFound': 'محامٍ',
+      'sortLawyersByNearest': 'الأقرب إليك',
+      'sortLawyersByName': 'الاسم',
+      'noLawyersNearby': 'لا يوجد محامون قريبون',
+      'noLawyersAvailable': 'لا يوجد محامون متاحون',
+      'noLawyersYet': 'لم يتم تسجيل أي محامٍ بعد',
+      'noLawyersMatchSearch': 'لا يوجد محامٍ مطابق',
+      'tryDifferentSearch': 'جرب كلمات بحث مختلفة',
+      'lawyerDetails': 'تفاصيل المحامي',
+      'contactInfo': 'معلومات الاتصال',
+      'professionalInfo': 'المعلومات المهنية',
+      'accountDetails': 'تفاصيل الحساب',
+      'memberSince': 'عضو منذ',
+      'role': 'الدور',
+
+      // Lawyer Profile
+      'myProfile': 'ملفي الشخصي',
+      'profilePicture': 'صورة الملف الشخصي',
+      'lawyerVerification': 'التحقق من المحامي',
+      'verifyLawyer': 'تحقق من المحامي',
+      'verifying': 'جاري التحقق...',
+      'lawyerVerified': 'تم التحقق - محامٍ مسجل',
+      'lawyerNotVerified': 'لم يتم العثور على الاسم',
+      'verificationFailed': 'فشل التحقق',
+      'registeredInBarAssociation': 'مسجل في الهيئة الوطنية للمحامين',
+      'notRegisteredInBarAssociation': 'غير موجود في سجل الهيئة الوطنية للمحامين',
+      'smsVerification': 'التحقق عبر رسالة نصية',
+      'smsVerificationDesc': 'سنرسل رمز تحقق مكون من 6 أرقام إلى رقم هاتف المحامي للتأكد من ملكيته',
+      'sendingCode': 'جاري إرسال الرمز...',
+      'codeSent': 'تم إرسال الرمز بنجاح',
+      'otpSendFailed': 'فشل إرسال رمز التحقق',
+      'otpVerifyFailed': 'فشل التحقق من الرمز',
+      'verified': 'تم التحقق',
+      'notVerified': 'لم يتم التحقق',
+      'officeLocation': 'موقع المكتب',
+      'uploadPicture': 'رفع صورة',
+      'setOfficeLocation': 'تحديد موقع المكتب',
+      'profileUpdated': 'تم تحديث الملف الشخصي بنجاح',
+      'profileUpdateFailed': 'فشل تحديث الملف الشخصي',
+      'saveProfile': 'حفظ الملف الشخصي',
+      'saving': 'جاري الحفظ...',
+      'personalInformation': 'المعلومات الشخصية',
+
+      // Property Edit
+      'propertyUpdatedSuccess': 'تم تحديث العقار بنجاح',
+      'propertyUpdateFailed': 'فشل تحديث العقار',
+      'propertyInformation': 'معلومات العقار',
+      'propertyPhoto': 'صورة العقار',
+      'ownerInformation': 'معلومات المالك',
+      'ownerName': 'اسم المالك',
+      'resetChanges': 'إعادة تعيين',
+      'addPropertyImage': 'أضف صورة للعقار',
+      'newDocumentSelected': 'تم اختيار مستند جديد',
+      'documentUploaded': 'تم رفع المستند',
+      'selectPropertyLocation': 'حدد موقع العقار',
+
+      // Search & Filter
+      'searchProperties': 'البحث عن عقار...',
+      'allTypes': 'الكل',
+      'sale': 'بيع',
+      'rent': 'إيجار',
+      'sortByNearest': 'الأقرب إليك',
+      'sortByNewest': 'الأحدث',
+      'nearYou': 'بالقرب منك',
+      'kmAway': 'كم',
+      'locationRequired': 'يجب تفعيل الموقع لعرض المسافة',
+      'noPropertiesMatch': 'لا توجد عقارات مطابقة',
+      'adjustFilters': 'جرب تغيير معايير البحث',
+      'allStatuses': 'كل الحالات',
+
+      // Favorites
+      'favorites': 'المفضلة',
+      'addToFavorites': 'إضافة إلى المفضلة',
+      'removeFromFavorites': 'إزالة من المفضلة',
+      'noFavorites': 'لا توجد عقارات مفضلة',
+      'noFavoritesHint': 'اضغط على القلب لحفظ العقارات المفضلة',
+      'all': 'الكل',
+
+      // Pagination
+      'loadingMore': 'جاري التحميل...',
+      'noMoreItems': 'لا توجد عناصر أخرى',
+
+      // Home Dashboard
+      'goodMorning': 'صباح الخير',
+      'goodAfternoon': 'مساء الخير',
+      'goodEvening': 'مساء الخير',
+      'hi': 'مرحباً',
+      'totalProperties': 'إجمالي العقارات',
+      'myListings': 'عقاراتي',
+      'availableNow': 'متاحة الآن',
+      'forRentCount': 'للإيجار',
+      'forSaleCount': 'للبيع',
+      'nearbyProperties': 'عقارات بالقرب منك',
+      'viewAll': 'عرض الكل',
+      'noNearbyProperties': 'لا توجد عقارات قريبة',
+      'enableLocationForNearby': 'فعّل الموقع لعرض العقارات القريبة',
+      'exploreProperties': 'استكشف العقارات',
+      'askLegalQuestion': 'اسأل سؤالاً قانونياً',
+      'findLawyer': 'ابحث عن محامٍ',
     },
     'en': {
       // App
@@ -378,8 +505,19 @@ class AppLocalizations {
       'contracts': 'Contracts',
       'cases': 'Cases',
       'aiAssistant': 'AI Assistant',
+      'mapView': 'Map View',
+      'listView': 'List View',
+      'propertiesOnMap': 'properties on map',
+      'conversationRestored': 'Conversation restored',
       'settings': 'Settings',
       'logout': 'Logout',
+      'logoutConfirm': 'Logout?',
+      'logoutMessage': 'Are you sure you want to logout?',
+      'noPropertiesYet': 'No Properties Yet',
+      'addFirstProperty': 'Add your first property to start\nmanaging your real estate portfolio',
+      'clearConversation': 'Clear conversation?',
+      'clearConversationMessage': 'All messages will be permanently removed.',
+      'clearAction': 'Clear',
       'welcomeToAqari': 'Welcome to Aqari',
       'managePropertiesEasily': 'Manage your properties easily',
       'quickActions': 'Quick Actions',
@@ -395,6 +533,7 @@ class AppLocalizations {
       'view': 'View',
       'edit': 'Edit',
       'delete': 'Delete',
+      'share': 'Share',
       'myProperties': 'My Properties',
       'propertyDetails': 'Property Details',
       'location': 'Location',
@@ -404,6 +543,9 @@ class AppLocalizations {
       'deletePropertyConfirm': 'Are you sure you want to delete this property? This action cannot be undone.',
       'forSale': 'For Sale',
       'forRent': 'For Rent',
+      'availableProperties': 'Available Properties',
+      'noOwnedProperties': 'You don\'t own any properties yet',
+      'noAvailableProperties': 'No available properties at the moment',
       'type': 'Type',
       'status': 'Status',
       'locationNotSet': 'Location not set',
@@ -560,6 +702,118 @@ class AppLocalizations {
       'disabled': 'Disabled',
       'deviceRegistered': 'Device Registered',
       'goToHome': 'Go to Home',
+      'verifyPhone': 'Verify Your Phone',
+      'verifyPhoneDesc': 'We will send a verification code to your registered phone number',
+      'phoneVerified': 'Phone Verified',
+      'enterOtpCode': 'Enter the 6-digit code',
+      'verifyCode': 'Verify Code',
+      'sendVerificationCode': 'Send Verification Code',
+      'resendCode': 'Resend Code',
+      'unlockToAccess': 'Please unlock to access the app',
+      'unlockApp': 'Unlock',
+
+      // Lawyers
+      'lawyers': 'Lawyers',
+      'searchLawyers': 'Search for a lawyer...',
+      'lawyersFound': 'lawyers found',
+      'sortLawyersByNearest': 'Nearest to you',
+      'sortLawyersByName': 'By name',
+      'noLawyersNearby': 'No lawyers nearby',
+      'noLawyersAvailable': 'No lawyers available',
+      'noLawyersYet': 'No lawyers have registered yet',
+      'noLawyersMatchSearch': 'No lawyers match your search',
+      'tryDifferentSearch': 'Try different search terms',
+      'lawyerDetails': 'Lawyer Details',
+      'contactInfo': 'Contact Information',
+      'professionalInfo': 'Professional Information',
+      'accountDetails': 'Account Details',
+      'memberSince': 'Member Since',
+      'role': 'Role',
+
+      // Lawyer Profile
+      'myProfile': 'My Profile',
+      'profilePicture': 'Profile Picture',
+      'lawyerVerification': 'Lawyer Verification',
+      'verifyLawyer': 'Verify lawyer',
+      'verifying': 'Verifying...',
+      'lawyerVerified': 'Verified — Registered lawyer',
+      'lawyerNotVerified': 'Name not found',
+      'verificationFailed': 'Verification failed',
+      'registeredInBarAssociation': 'Registered in the National Bar Association',
+      'notRegisteredInBarAssociation': 'Not found in the National Bar Association records',
+      'smsVerification': 'SMS Verification',
+      'smsVerificationDesc': 'We will send a 6-digit code to the lawyer\'s phone number to verify ownership',
+      'sendingCode': 'Sending code...',
+      'codeSent': 'Code sent successfully',
+      'otpSendFailed': 'Failed to send verification code',
+      'otpVerifyFailed': 'Failed to verify code',
+      'verified': 'Verified',
+      'notVerified': 'Not verified',
+      'officeLocation': 'Office Location',
+      'uploadPicture': 'Upload Photo',
+      'setOfficeLocation': 'Set Office Location',
+      'profileUpdated': 'Profile updated successfully',
+      'profileUpdateFailed': 'Failed to update profile',
+      'saveProfile': 'Save Profile',
+      'saving': 'Saving...',
+      'personalInformation': 'Personal Information',
+
+      // Property Edit
+      'propertyUpdatedSuccess': 'Property updated successfully',
+      'propertyUpdateFailed': 'Failed to update property',
+      'propertyInformation': 'Property Information',
+      'propertyPhoto': 'Property Photo',
+      'ownerInformation': 'Owner Information',
+      'ownerName': 'Owner Name',
+      'resetChanges': 'Reset',
+      'addPropertyImage': 'Add property image',
+      'newDocumentSelected': 'New document selected',
+      'documentUploaded': 'Document uploaded',
+      'selectPropertyLocation': 'Set property location',
+
+      // Search & Filter
+      'searchProperties': 'Search properties...',
+      'allTypes': 'All',
+      'sale': 'Sale',
+      'rent': 'Rent',
+      'sortByNearest': 'Nearest to you',
+      'sortByNewest': 'Newest first',
+      'nearYou': 'Near you',
+      'kmAway': 'km',
+      'locationRequired': 'Enable location to see distance',
+      'noPropertiesMatch': 'No properties match',
+      'adjustFilters': 'Try adjusting your search criteria',
+      'allStatuses': 'All statuses',
+
+      // Favorites
+      'favorites': 'Favorites',
+      'addToFavorites': 'Add to favorites',
+      'removeFromFavorites': 'Remove from favorites',
+      'noFavorites': 'No favorite properties',
+      'noFavoritesHint': 'Tap the heart icon to save properties you like',
+      'all': 'All',
+
+      // Pagination
+      'loadingMore': 'Loading more...',
+      'noMoreItems': 'No more items',
+
+      // Home Dashboard
+      'goodMorning': 'Good morning',
+      'goodAfternoon': 'Good afternoon',
+      'goodEvening': 'Good evening',
+      'hi': 'Hi',
+      'totalProperties': 'Total Properties',
+      'myListings': 'My Listings',
+      'availableNow': 'Available Now',
+      'forRentCount': 'For Rent',
+      'forSaleCount': 'For Sale',
+      'nearbyProperties': 'Properties Near You',
+      'viewAll': 'View All',
+      'noNearbyProperties': 'No nearby properties',
+      'enableLocationForNearby': 'Enable location to see nearby properties',
+      'exploreProperties': 'Explore Properties',
+      'askLegalQuestion': 'Ask Legal Question',
+      'findLawyer': 'Find a Lawyer',
     },
     'fr': {
       // App
@@ -654,8 +908,19 @@ class AppLocalizations {
       'contracts': 'Contrats',
       'cases': 'Affaires',
       'aiAssistant': 'Assistant IA',
+      'mapView': 'Vue carte',
+      'listView': 'Vue liste',
+      'propertiesOnMap': 'propriétés sur la carte',
+      'conversationRestored': 'Conversation restaurée',
       'settings': 'Paramètres',
       'logout': 'Déconnexion',
+      'logoutConfirm': 'Déconnexion ?',
+      'logoutMessage': 'Êtes-vous sûr de vouloir vous déconnecter ?',
+      'noPropertiesYet': 'Aucune propriété encore',
+      'addFirstProperty': 'Ajoutez votre première propriété pour commencer\nà gérer votre portefeuille immobilier',
+      'clearConversation': 'Effacer la conversation ?',
+      'clearConversationMessage': 'Tous les messages seront définitivement supprimés.',
+      'clearAction': 'Effacer',
       'welcomeToAqari': 'Bienvenue sur Aqari',
       'managePropertiesEasily': 'Gérez vos propriétés facilement',
       'quickActions': 'Actions Rapides',
@@ -672,6 +937,7 @@ class AppLocalizations {
       'view': 'Voir',
       'edit': 'Modifier',
       'delete': 'Supprimer',
+      'share': 'Partager',
       'myProperties': 'Mes propriétés',
       'propertyDetails': 'Détails de la propriété',
       'location': 'Emplacement',
@@ -681,6 +947,9 @@ class AppLocalizations {
       'deletePropertyConfirm': 'Êtes-vous sûr de vouloir supprimer cette propriété? Cette action ne peut pas être annulée.',
       'forSale': 'À vendre',
       'forRent': 'À louer',
+      'availableProperties': 'Propriétés disponibles',
+      'noOwnedProperties': 'Vous n\'avez pas encore de propriétés',
+      'noAvailableProperties': 'Aucune propriété disponible pour le moment',
       'type': 'Type',
       'status': 'Statut',
       'locationNotSet': 'Emplacement non défini',
@@ -837,7 +1106,119 @@ class AppLocalizations {
       'disabled': 'Désactivé',
       'deviceRegistered': 'Appareil enregistré',
       'goToHome': "Aller à l'accueil",
+      'verifyPhone': 'Vérifier votre téléphone',
+      'verifyPhoneDesc': 'Nous enverrons un code de vérification à votre numéro de téléphone enregistré',
+      'phoneVerified': 'Téléphone vérifié',
+      'enterOtpCode': 'Entrez le code à 6 chiffres',
+      'verifyCode': 'Vérifier le code',
+      'sendVerificationCode': 'Envoyer le code de vérification',
+      'resendCode': 'Renvoyer le code',
+      'unlockToAccess': "Veuillez déverrouiller pour accéder à l'application",
+      'unlockApp': 'Déverrouiller',
       'back': 'Retour',
+
+      // Lawyers
+      'lawyers': 'Avocats',
+      'searchLawyers': 'Rechercher un avocat...',
+      'lawyersFound': 'avocats trouvés',
+      'sortLawyersByNearest': 'Les plus proches',
+      'sortLawyersByName': 'Par nom',
+      'noLawyersNearby': 'Aucun avocat à proximité',
+      'noLawyersAvailable': 'Aucun avocat disponible',
+      'noLawyersYet': "Aucun avocat n'est encore inscrit",
+      'noLawyersMatchSearch': 'Aucun avocat ne correspond',
+      'tryDifferentSearch': 'Essayez des termes différents',
+      'lawyerDetails': "Détails de l'avocat",
+      'contactInfo': 'Coordonnées',
+      'professionalInfo': 'Informations professionnelles',
+      'accountDetails': 'Détails du compte',
+      'memberSince': 'Membre depuis',
+      'role': 'Rôle',
+
+      // Lawyer Profile
+      'myProfile': 'Mon Profil',
+      'profilePicture': 'Photo de profil',
+      'lawyerVerification': 'Vérification de l\'avocat',
+      'verifyLawyer': 'Vérifier l\'avocat',
+      'verifying': 'Vérification...',
+      'lawyerVerified': 'Vérifié — Avocat inscrit',
+      'lawyerNotVerified': 'Nom non trouvé',
+      'verificationFailed': 'Échec de la vérification',
+      'registeredInBarAssociation': 'Inscrit à l\'Ordre National des Avocats',
+      'notRegisteredInBarAssociation': 'Non trouvé dans les registres de l\'Ordre National des Avocats',
+      'smsVerification': 'Vérification par SMS',
+      'smsVerificationDesc': 'Nous enverrons un code à 6 chiffres au numéro de téléphone de l\'avocat pour vérifier la propriété',
+      'sendingCode': 'Envoi du code...',
+      'codeSent': 'Code envoyé avec succès',
+      'otpSendFailed': 'Échec de l\'envoi du code de vérification',
+      'otpVerifyFailed': 'Échec de la vérification du code',
+      'verified': 'Vérifié',
+      'notVerified': 'Non vérifié',
+      'officeLocation': 'Emplacement du bureau',
+      'uploadPicture': 'Télécharger une photo',
+      'setOfficeLocation': 'Définir l\'emplacement du bureau',
+      'profileUpdated': 'Profil mis à jour avec succès',
+      'profileUpdateFailed': 'Échec de la mise à jour du profil',
+      'saveProfile': 'Enregistrer le profil',
+      'saving': 'Enregistrement...',
+      'personalInformation': 'Informations personnelles',
+
+      // Property Edit
+      'propertyUpdatedSuccess': 'Propriété mise à jour avec succès',
+      'propertyUpdateFailed': 'Échec de la mise à jour de la propriété',
+      'propertyInformation': 'Informations sur la propriété',
+      'propertyPhoto': 'Photo de la propriété',
+      'ownerInformation': 'Informations du propriétaire',
+      'ownerName': 'Nom du propriétaire',
+      'resetChanges': 'Réinitialiser',
+      'addPropertyImage': 'Ajouter une image de la propriété',
+      'newDocumentSelected': 'Nouveau document sélectionné',
+      'documentUploaded': 'Document téléchargé',
+      'selectPropertyLocation': 'Définir l\'emplacement de la propriété',
+
+      // Search & Filter
+      'searchProperties': 'Rechercher des propriétés...',
+      'allTypes': 'Tous',
+      'sale': 'Vente',
+      'rent': 'Location',
+      'sortByNearest': 'Les plus proches',
+      'sortByNewest': 'Les plus récentes',
+      'nearYou': 'Près de vous',
+      'kmAway': 'km',
+      'locationRequired': 'Activez la localisation pour voir la distance',
+      'noPropertiesMatch': 'Aucune propriété correspondante',
+      'adjustFilters': 'Essayez de modifier vos critères',
+      'allStatuses': 'Tous les statuts',
+
+      // Favorites
+      'favorites': 'Favoris',
+      'addToFavorites': 'Ajouter aux favoris',
+      'removeFromFavorites': 'Retirer des favoris',
+      'noFavorites': 'Aucune propriété favorite',
+      'noFavoritesHint': 'Appuyez sur le cœur pour sauvegarder des propriétés',
+      'all': 'Tous',
+
+      // Pagination
+      'loadingMore': 'Chargement...',
+      'noMoreItems': 'Plus d\'éléments',
+
+      // Home Dashboard
+      'goodMorning': 'Bonjour',
+      'goodAfternoon': 'Bon après-midi',
+      'goodEvening': 'Bonsoir',
+      'hi': 'Salut',
+      'totalProperties': 'Total des propriétés',
+      'myListings': 'Mes annonces',
+      'availableNow': 'Disponible maintenant',
+      'forRentCount': 'À louer',
+      'forSaleCount': 'À vendre',
+      'nearbyProperties': 'Propriétés à proximité',
+      'viewAll': 'Voir tout',
+      'noNearbyProperties': 'Aucune propriété à proximité',
+      'enableLocationForNearby': 'Activez la localisation pour voir les propriétés proches',
+      'exploreProperties': 'Explorer les propriétés',
+      'askLegalQuestion': 'Poser une question juridique',
+      'findLawyer': 'Trouver un avocat',
     },
   };
 
@@ -933,8 +1314,19 @@ class AppLocalizations {
   String get contracts => translate('contracts');
   String get cases => translate('cases');
   String get aiAssistant => translate('aiAssistant');
+  String get mapView => translate('mapView');
+  String get listView => translate('listView');
+  String get propertiesOnMap => translate('propertiesOnMap');
+  String get conversationRestored => translate('conversationRestored');
   String get settings => translate('settings');
   String get logout => translate('logout');
+  String get logoutConfirm => translate('logoutConfirm');
+  String get logoutMessage => translate('logoutMessage');
+  String get noPropertiesYet => translate('noPropertiesYet');
+  String get addFirstProperty => translate('addFirstProperty');
+  String get clearConversation => translate('clearConversation');
+  String get clearConversationMessage => translate('clearConversationMessage');
+  String get clearAction => translate('clearAction');
   String get welcomeToAqari => translate('welcomeToAqari');
   String get managePropertiesEasily => translate('managePropertiesEasily');
   String get quickActions => translate('quickActions');
@@ -996,6 +1388,13 @@ class AppLocalizations {
   String get disabled => translate('disabled');
   String get deviceRegistered => translate('deviceRegistered');
   String get goToHome => translate('goToHome');
+  String get verifyPhone => translate('verifyPhone');
+  String get verifyPhoneDesc => translate('verifyPhoneDesc');
+  String get phoneVerified => translate('phoneVerified');
+  String get enterOtpCode => translate('enterOtpCode');
+  String get verifyCode => translate('verifyCode');
+  String get unlockToAccess => translate('unlockToAccess');
+  String get unlockApp => translate('unlockApp');
   String get back => translate('back');
 
   // Property Actions Getters
@@ -1011,6 +1410,9 @@ class AppLocalizations {
   String get deletePropertyConfirm => translate('deletePropertyConfirm');
   String get forSale => translate('forSale');
   String get forRent => translate('forRent');
+  String get availableProperties => translate('availableProperties');
+  String get noOwnedProperties => translate('noOwnedProperties');
+  String get noAvailableProperties => translate('noAvailableProperties');
   String get type => translate('type');
   String get status => translate('status');
   String get locationNotSet => translate('locationNotSet');
@@ -1094,6 +1496,95 @@ class AppLocalizations {
   String get propertySummary => translate('propertySummary');
   String get selectLocation => translate('selectLocation');
   String get tapOnMapOrDragPin => translate('tapOnMapOrDragPin');
+
+  // Lawyers Getters
+  String get lawyers => translate('lawyers');
+  String get lawyerDetails => translate('lawyerDetails');
+  String get searchLawyers => translate('searchLawyers');
+  String get sortLawyersByNearest => translate('sortLawyersByNearest');
+  String get sortLawyersByName => translate('sortLawyersByName');
+  String get noLawyersNearby => translate('noLawyersNearby');
+
+  // Lawyer Profile Getters
+  String get myProfile => translate('myProfile');
+  String get profilePicture => translate('profilePicture');
+  String get lawyerVerification => translate('lawyerVerification');
+  String get officeLocation => translate('officeLocation');
+  String get uploadPicture => translate('uploadPicture');
+  String get verifyLawyer => translate('verifyLawyer');
+  String get verifying => translate('verifying');
+  String get lawyerVerified => translate('lawyerVerified');
+  String get lawyerNotVerified => translate('lawyerNotVerified');
+  String get verificationFailed => translate('verificationFailed');
+  String get registeredInBarAssociation => translate('registeredInBarAssociation');
+  String get notRegisteredInBarAssociation => translate('notRegisteredInBarAssociation');
+  String get smsVerification => translate('smsVerification');
+  String get smsVerificationDesc => translate('smsVerificationDesc');
+  String get sendingCode => translate('sendingCode');
+  String get codeSent => translate('codeSent');
+  String get otpSendFailed => translate('otpSendFailed');
+  String get otpVerifyFailed => translate('otpVerifyFailed');
+  String get verified => translate('verified');
+  String get notVerified => translate('notVerified');
+  String get setOfficeLocation => translate('setOfficeLocation');
+  String get profileUpdated => translate('profileUpdated');
+  String get profileUpdateFailed => translate('profileUpdateFailed');
+  String get saveProfile => translate('saveProfile');
+  String get saving => translate('saving');
+  String get personalInformation => translate('personalInformation');
+
+  // Property Edit Getters
+  String get propertyUpdatedSuccess => translate('propertyUpdatedSuccess');
+  String get propertyUpdateFailed => translate('propertyUpdateFailed');
+  String get propertyInformation => translate('propertyInformation');
+  String get propertyPhoto => translate('propertyPhoto');
+  String get ownerInformation => translate('ownerInformation');
+  String get ownerName => translate('ownerName');
+  String get resetChanges => translate('resetChanges');
+  String get addPropertyImage => translate('addPropertyImage');
+  String get newDocumentSelected => translate('newDocumentSelected');
+  String get documentUploaded => translate('documentUploaded');
+  String get selectPropertyLocation => translate('selectPropertyLocation');
+
+  // Search & Filter Getters
+  String get searchProperties => translate('searchProperties');
+  String get allTypes => translate('allTypes');
+  String get sale => translate('sale');
+  String get rent => translate('rent');
+  String get sortByNearest => translate('sortByNearest');
+  String get sortByNewest => translate('sortByNewest');
+  String get nearYou => translate('nearYou');
+  String get kmAway => translate('kmAway');
+  String get locationRequired => translate('locationRequired');
+  String get noPropertiesMatch => translate('noPropertiesMatch');
+  String get adjustFilters => translate('adjustFilters');
+  String get favorites => translate('favorites');
+  String get addToFavorites => translate('addToFavorites');
+  String get removeFromFavorites => translate('removeFromFavorites');
+  String get noFavorites => translate('noFavorites');
+  String get noFavoritesHint => translate('noFavoritesHint');
+  String get all => translate('all');
+  String get loadingMore => translate('loadingMore');
+  String get noMoreItems => translate('noMoreItems');
+  String get allStatuses => translate('allStatuses');
+
+  // Home Dashboard Getters
+  String get goodMorning => translate('goodMorning');
+  String get goodAfternoon => translate('goodAfternoon');
+  String get goodEvening => translate('goodEvening');
+  String get hi => translate('hi');
+  String get totalProperties => translate('totalProperties');
+  String get myListings => translate('myListings');
+  String get availableNow => translate('availableNow');
+  String get forRentCount => translate('forRentCount');
+  String get forSaleCount => translate('forSaleCount');
+  String get nearbyProperties => translate('nearbyProperties');
+  String get viewAll => translate('viewAll');
+  String get noNearbyProperties => translate('noNearbyProperties');
+  String get enableLocationForNearby => translate('enableLocationForNearby');
+  String get exploreProperties => translate('exploreProperties');
+  String get askLegalQuestion => translate('askLegalQuestion');
+  String get findLawyer => translate('findLawyer');
 }
 
 class _AppLocalizationsDelegate

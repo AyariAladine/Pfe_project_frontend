@@ -10,12 +10,10 @@ import 'token_service.dart';
 class PropertyService {
   final ApiService _apiService = ApiService();
 
-  /// Create a new property (multipart form-data with optional image)
+  /// Create a new property
   Future<PropertyModel> createProperty(
-    CreatePropertyDto dto, {
-    Uint8List? imageBytes,
-    String? imageFileName,
-  }) async {
+    CreatePropertyDto dto,
+  ) async {
     try {
       // Get current user's ID for the owner field
       final userId = await TokenService.getUserId();
@@ -23,31 +21,31 @@ class PropertyService {
         throw ApiException('User not authenticated');
       }
 
-      // Build form fields from DTO
-      final fields = <String, String>{
+      // Build body from DTO
+      final body = <String, dynamic>{
         'owner': userId,
         'Propertyaddresse': dto.propertyAddress,
         'PropertyType': dto.propertyType.toJson(),
       };
       if (dto.propertyStatus != null) {
-        fields['propertyStatus'] = dto.propertyStatus!.toJson();
+        body['propertyStatus'] = dto.propertyStatus!.toJson();
+      }
+      if (dto.description != null && dto.description!.isNotEmpty) {
+        body['description'] = dto.description!;
       }
       if (dto.latitude != null) {
-        fields['latitude'] = dto.latitude!;
+        body['latitude'] = dto.latitude!;
       }
       if (dto.longitude != null) {
-        fields['longitude'] = dto.longitude!;
+        body['longitude'] = dto.longitude!;
       }
       if (dto.contractId != null) {
-        fields['contractId'] = dto.contractId!;
+        body['contractId'] = dto.contractId!;
       }
 
-      final response = await _apiService.postMultipart(
+      final response = await _apiService.post(
         ApiConstants.properties,
-        fields: fields,
-        fileBytes: imageBytes,
-        fileName: imageFileName,
-        fieldName: 'image',
+        body: body,
         requiresAuth: true,
       );
 
@@ -176,7 +174,29 @@ class PropertyService {
     }
   }
 
-  /// Upload property image
+  /// Upload property images (supports multiple)
+  Future<PropertyModel> uploadPropertyImages(
+    String propertyId, {
+    required List<Uint8List> allImageBytes,
+    required List<String> allFileNames,
+  }) async {
+    try {
+      final response = await _apiService.uploadMultipleFiles(
+        '${ApiConstants.properties}/$propertyId/upload-image',
+        allFileBytes: allImageBytes,
+        allFileNames: allFileNames,
+        fieldName: 'images',
+        requiresAuth: true,
+      );
+
+      final propertyData = response['property'] ?? response;
+      return PropertyModel.fromJson(propertyData);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Upload single property image (convenience wrapper)
   Future<PropertyModel> uploadPropertyImage(
     String propertyId, {
     File? imageFile,
@@ -193,16 +213,11 @@ class PropertyService {
         throw ApiException('No image data provided');
       }
 
-      final response = await _apiService.uploadFile(
-        '${ApiConstants.properties}/$propertyId/upload-image',
-        fileBytes: bytes,
-        fileName: fileName,
-        fieldName: 'image',
-        requiresAuth: true,
+      return uploadPropertyImages(
+        propertyId,
+        allImageBytes: [bytes],
+        allFileNames: [fileName],
       );
-
-      final propertyData = response['property'] ?? response;
-      return PropertyModel.fromJson(propertyData);
     } catch (e) {
       rethrow;
     }

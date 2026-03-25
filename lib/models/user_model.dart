@@ -42,6 +42,9 @@ class UserModel {
   final UserRole role;
   final String phoneNumber;
   final String? profileImageUrl;
+  final bool? isVerified;
+  final double? latitude;
+  final double? longitude;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -54,14 +57,15 @@ class UserModel {
     required this.role,
     required this.phoneNumber,
     this.profileImageUrl,
+    this.isVerified,
+    this.latitude,
+    this.longitude,
     this.createdAt,
     this.updatedAt,
   });
 
-  /// Get full name
   String get fullName => '$name $lastName';
 
-  /// Create UserModel from JSON response
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -72,6 +76,9 @@ class UserModel {
       role: _parseRole(json['role']),
       phoneNumber: json['phoneNumber'] as String? ?? '',
       profileImageUrl: json['profileImageUrl'] as String?,
+      isVerified: json['isVerified'] as bool?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
@@ -91,6 +98,9 @@ class UserModel {
       'role': role.name,
       'phoneNumber': phoneNumber,
       if (profileImageUrl != null) 'profileImageUrl': profileImageUrl,
+      if (isVerified != null) 'isVerified': isVerified,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     };
   }
 
@@ -114,6 +124,9 @@ class UserModel {
     UserRole? role,
     String? phoneNumber,
     String? profileImageUrl,
+    bool? isVerified,
+    double? latitude,
+    double? longitude,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -126,6 +139,9 @@ class UserModel {
       role: role ?? this.role,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      isVerified: isVerified ?? this.isVerified,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

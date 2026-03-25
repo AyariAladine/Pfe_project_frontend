@@ -5,9 +5,13 @@ import 'package:provider/provider.dart';
 
 import 'core/localization/app_localizations.dart';
 import 'core/theme/app_theme.dart';
+import 'services/favorites_service.dart';
 import 'services/language_provider.dart';
 import 'services/theme_provider.dart';
 import 'viewmodels/auth/auth_viewmodel.dart';
+import 'viewmodels/lawyer/lawyer_list_viewmodel.dart';
+import 'viewmodels/lawyer/lawyer_profile_viewmodel.dart';
+import 'viewmodels/user/user_profile_viewmodel.dart';
 import 'views/splash/splash_view.dart';
 
 void main() async {
@@ -26,7 +30,11 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => FavoritesService()..loadFavorites()),
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
+        ChangeNotifierProvider(create: (_) => LawyerListViewModel()),
+        ChangeNotifierProvider(create: (_) => LawyerProfileViewModel()),
+        ChangeNotifierProvider(create: (_) => UserProfileViewModel()),
       ],
       child: Consumer2<LanguageProvider, ThemeProvider>(
         builder: (context, languageProvider, themeProvider, _) {

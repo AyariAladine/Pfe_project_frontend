@@ -242,7 +242,7 @@ class _BasicInfoStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<PropertyWizardViewModel>();
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Form(
         key: viewModel.basicInfoFormKey,
@@ -360,6 +360,18 @@ class _BasicInfoStep extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Description Card
+            _InputCard(
+              icon: Icons.description_outlined,
+              title: AppLocalizations.of(context)!.descriptionOptional,
+              child: CustomTextField(
+                controller: viewModel.descriptionController,
+                hintText: AppLocalizations.of(context)!.addDetailedDescription,
+                maxLines: 4,
               ),
             ),
             const SizedBox(height: 20),
@@ -1179,12 +1191,16 @@ class _MapPickerSheetState extends State<_MapPickerSheet> {
                     icon: const Icon(Icons.open_in_new),
                     tooltip: AppLocalizations.of(context)!.openInGoogleMapsShort,
                     onPressed: () async {
-                      final url = ApiConstants.getGoogleMapsUrl(
+                      final url = Uri.parse(ApiConstants.getGoogleMapsUrl(
                         _selectedLocation.latitude,
                         _selectedLocation.longitude,
-                      );
-                      if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
+                      ));
+                      try {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      } catch (_) {
+                        try {
+                          await launchUrl(url);
+                        } catch (_) {}
                       }
                     },
                   ),
@@ -1325,7 +1341,7 @@ class _AdditionalInfoStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<PropertyWizardViewModel>();
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1458,6 +1474,11 @@ class _AdditionalInfoStep extends StatelessWidget {
                   label: AppLocalizations.of(context)!.status,
                   value: viewModel.selectedPropertyStatus.displayName,
                 ),
+                if (viewModel.descriptionController.text.trim().isNotEmpty)
+                  _SummaryItem(
+                    label: AppLocalizations.of(context)!.descriptionOptional,
+                    value: viewModel.descriptionController.text.trim(),
+                  ),
                 _SummaryItem(
                   label: AppLocalizations.of(context)!.photos,
                   value: '${viewModel.propertyImages.length} ${AppLocalizations.of(context)!.photosAdded}',

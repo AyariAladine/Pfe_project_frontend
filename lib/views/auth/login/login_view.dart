@@ -84,18 +84,22 @@ class _LoginViewContent extends StatelessWidget {
 
                           // Expanded content area
                           Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Logo and Welcome Text
-                                _buildHeader(context, l10n),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const SizedBox(height: 24),
+                                  // Logo and Welcome Text
+                                  _buildHeader(context, l10n),
 
-                                const SizedBox(height: 32),
+                                  const SizedBox(height: 32),
 
-                                // Login Form
-                                _buildLoginForm(context, l10n),
-                              ],
+                                  // Login Form
+                                  _buildLoginForm(context, l10n),
+                                  const SizedBox(height: 24),
+                                ],
+                              ),
                             ),
                           ),
 

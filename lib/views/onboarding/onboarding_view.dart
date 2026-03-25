@@ -40,11 +40,41 @@ class _OnboardingContent extends StatelessWidget {
                     child: CircularProgressIndicator(),
                   );
                 }
+
+                // All steps already completed — go straight to home
+                if (vm.allComplete && vm.currentStep != OnboardingStep.complete) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainShell()),
+                      (route) => false,
+                    );
+                  });
+                  return const Center(child: CircularProgressIndicator());
+                }
                 
                 return Column(
                   children: [
-                    // Progress indicator
-                    _buildProgressIndicator(context, vm),
+                    // Progress indicator + skip button
+                    Row(
+                      children: [
+                        Expanded(child: _buildProgressIndicator(context, vm)),
+                        if (vm.currentStep != OnboardingStep.complete)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: TextButton(
+                              onPressed: () => _skipOnboarding(context),
+                              child: Text(
+                                l10n.skip,
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                     
                     // Content
                     Expanded(
@@ -60,6 +90,14 @@ class _OnboardingContent extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _skipOnboarding(BuildContext context) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const MainShell()),
+      (route) => false,
     );
   }
 
@@ -99,6 +137,8 @@ class _OnboardingContent extends StatelessWidget {
     switch (vm.currentStep) {
       case OnboardingStep.welcome:
         return _WelcomeStep(key: const ValueKey('welcome'));
+      case OnboardingStep.phoneVerification:
+        return _PhoneVerificationStep(key: const ValueKey('phone'));
       case OnboardingStep.cinScan:
         return _CinScanStep(key: const ValueKey('cin'));
       case OnboardingStep.biometrics:
@@ -157,6 +197,223 @@ class _WelcomeStep extends StatelessWidget {
           CustomButton(
             text: l10n.getStarted,
             onPressed: () => vm.nextStep(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Phone Verification Step
+class _PhoneVerificationStep extends StatefulWidget {
+  const _PhoneVerificationStep({super.key});
+
+  @override
+  State<_PhoneVerificationStep> createState() => _PhoneVerificationStepState();
+}
+
+class _PhoneVerificationStepState extends State<_PhoneVerificationStep> {
+  final _codeController = TextEditingController();
+  final _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final vm = context.watch<OnboardingViewModel>();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: vm.phoneVerified
+                  ? AppColors.success.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(
+              vm.phoneVerified ? Icons.check_circle : Icons.sms_rounded,
+              size: 50,
+              color: vm.phoneVerified ? AppColors.success : AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l10n.verifyPhone,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.verifyPhoneDesc,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+
+          // Show user's phone number
+          if (vm.phoneNumber != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                vm.phoneNumber!,
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+
+          // Error
+          if (vm.error != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      vm.error!,
+                      style: TextStyle(color: AppColors.error, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Already verified
+          if (vm.phoneVerified) ...[
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.success),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.verified, color: AppColors.success, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.phoneVerified,
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            CustomButton(
+              text: l10n.continueText,
+              onPressed: () => vm.nextStep(),
+            ),
+          ]
+          // OTP sent — show code input
+          else if (vm.otpSent) ...[
+            Text(
+              l10n.enterOtpCode,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _codeController,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              maxLength: 6,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 8,
+              ),
+              decoration: InputDecoration(
+                hintText: '------',
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            CustomButton(
+              text: l10n.verifyCode,
+              isLoading: vm.isLoading,
+              onPressed: vm.isLoading
+                  ? null
+                  : () async {
+                      final code = _codeController.text.trim();
+                      if (code.length != 6) return;
+                      final ok = await vm.verifyOtp(code);
+                      if (ok) {
+                        vm.nextStep();
+                      }
+                    },
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: vm.isLoading
+                  ? null
+                  : () {
+                      vm.resetOtp();
+                      _codeController.clear();
+                    },
+              child: Text(l10n.resendCode),
+            ),
+          ]
+          // Initial state — send code button
+          else ...[
+            CustomButton(
+              text: l10n.sendVerificationCode,
+              isLoading: vm.isLoading,
+              onPressed: vm.isLoading ? null : () => vm.sendOtp(),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+          TextButton.icon(
+            onPressed: () => vm.previousStep(),
+            icon: const Icon(Icons.arrow_back),
+            label: Text(l10n.back),
           ),
         ],
       ),
@@ -581,6 +838,13 @@ class _CompleteStep extends StatelessWidget {
             ),
             child: Column(
               children: [
+                _SummaryRow(
+                  icon: Icons.phone_android,
+                  label: l10n.phoneNumber,
+                  value: vm.phoneVerified ? (vm.phoneNumber ?? '-') : '-',
+                  isVerified: vm.phoneVerified,
+                ),
+                const Divider(height: 24),
                 _SummaryRow(
                   icon: Icons.badge,
                   label: l10n.cinNumber,

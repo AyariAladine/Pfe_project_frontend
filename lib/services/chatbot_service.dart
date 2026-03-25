@@ -35,7 +35,6 @@ class ChatbotService {
 
   ChatbotService({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Ask a legal question. Returns the AI answer and sources.
   Future<ChatbotAskResult> ask(
     String question, {
     int topK = 5,
@@ -47,7 +46,7 @@ class ChatbotService {
       final body = <String, dynamic>{
         'question': question,
         'topK': topK,
-        if (lawNum != null) 'lawNum': lawNum,
+        'lawNum': ?lawNum,
       };
       debugPrint('[ChatbotService] Request body: ${jsonEncode(body)}');
       debugPrint('[ChatbotService] Request headers: {Content-Type: application/json}');
@@ -98,7 +97,7 @@ class ChatbotService {
       debugPrint('  Body: ${jsonEncode({
         'question': question,
         'topK': topK,
-        if (lawNum != null) 'lawNum': lawNum,
+        'lawNum': ?lawNum,
       })}');
       debugPrint('  Headers: {Content-Type: application/json}');
       debugPrint('  Environment: kIsWeb=$kIsWeb');

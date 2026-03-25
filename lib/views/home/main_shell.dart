@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../models/property_model.dart';
+import '../../models/user_model.dart';
 import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../widgets/language_selector.dart';
 import '../auth/login/login_view.dart';
@@ -12,6 +13,10 @@ import '../property/property_list_view.dart';
 import '../property/property_detail_view.dart';
 import '../property/edit_property_view.dart';
 import '../property/create_property_wizard_view.dart';
+import '../lawyer/lawyer_list_view.dart';
+import '../lawyer/lawyer_detail_view.dart';
+import '../lawyer/lawyer_profile_view.dart';
+import '../user/user_profile_view.dart';
 import 'ai_assistant_view.dart';
 import 'home_content.dart';
 
@@ -20,6 +25,8 @@ enum NavItem {
   home,
   properties,
   addProperty,
+  lawyers,
+  profile,
   contracts,
   cases,
   aiAssistant,
@@ -44,6 +51,7 @@ class _MainShellState extends State<MainShell>
   int _propertyListRefreshKey = 0; // Key to force property list refresh
   PropertyModel? _selectedProperty; // Currently selected property for detail view
   PropertyModel? _editingProperty; // Currently editing property
+  UserModel? _selectedLawyer; // Currently selected lawyer for detail view
 
   @override
   void initState() {
@@ -78,6 +86,7 @@ class _MainShellState extends State<MainShell>
       _currentPage = item;
       _selectedProperty = null; // Clear detail view when switching pages
       _editingProperty = null; // Clear edit view when switching pages
+      _selectedLawyer = null;  // Clear lawyer detail when switching pages
     });
     // On narrow screens / mobile close the drawer; on wide web the sidebar stays open
     final isWideScreen = kIsWeb && MediaQuery.of(context).size.width >= 768;
@@ -173,6 +182,13 @@ class _MainShellState extends State<MainShell>
         return l10n.properties;
       case NavItem.addProperty:
         return l10n.addProperty;
+      case NavItem.lawyers:
+        if (_selectedLawyer != null) {
+          return l10n.lawyerDetails;
+        }
+        return l10n.lawyers;
+      case NavItem.profile:
+        return l10n.myProfile;
       case NavItem.contracts:
         return l10n.contracts;
       case NavItem.cases:
@@ -187,7 +203,32 @@ class _MainShellState extends State<MainShell>
   Widget _buildBody() {
     switch (_currentPage) {
       case NavItem.home:
-        return const HomeContent();
+        return HomeContent(
+          onNavigate: (destination, {property}) {
+            switch (destination) {
+              case 'addProperty':
+                setState(() => _currentPage = NavItem.addProperty);
+                break;
+              case 'properties':
+                setState(() => _currentPage = NavItem.properties);
+                break;
+              case 'aiAssistant':
+                setState(() => _currentPage = NavItem.aiAssistant);
+                break;
+              case 'lawyers':
+                setState(() => _currentPage = NavItem.lawyers);
+                break;
+              case 'propertyDetail':
+                if (property != null) {
+                  setState(() {
+                    _currentPage = NavItem.properties;
+                    _selectedProperty = property;
+                  });
+                }
+                break;
+            }
+          },
+        );
       case NavItem.properties:
         if (_editingProperty != null) {
           return EditPropertyContent(
@@ -247,6 +288,24 @@ class _MainShellState extends State<MainShell>
             });
           },
         );
+      case NavItem.lawyers:
+        if (_selectedLawyer != null) {
+          return LawyerDetailContent(
+            lawyer: _selectedLawyer!,
+            onBack: () => setState(() => _selectedLawyer = null),
+          );
+        }
+        return LawyerListContent(
+          onLawyerSelected: (lawyer) {
+            setState(() => _selectedLawyer = lawyer);
+          },
+        );
+      case NavItem.profile:
+        final authVM = context.read<AuthViewModel>();
+        if (authVM.currentUser?.role == UserRole.lawyer) {
+          return const LawyerProfileContent();
+        }
+        return const UserProfileContent();
       case NavItem.contracts:
         return _buildPlaceholder('Contracts', Icons.description_rounded);
       case NavItem.cases:
@@ -319,7 +378,16 @@ class _MainShellState extends State<MainShell>
                 title: l10n.properties,
                 item: NavItem.properties,
               ),
-          
+              _buildDrawerItem(
+                icon: Icons.gavel_rounded,
+                title: l10n.lawyers,
+                item: NavItem.lawyers,
+              ),
+              _buildDrawerItem(
+                icon: Icons.person_rounded,
+                title: l10n.myProfile,
+                item: NavItem.profile,
+              ),
               _buildDrawerItem(
                 icon: Icons.description_rounded,
                 title: l10n.contracts,
@@ -369,22 +437,59 @@ class _MainShellState extends State<MainShell>
                   l10n.logout,
                   style: const TextStyle(color: AppColors.error),
                 ),
-                onTap: () async {
-                  await authVM.signOut();
-                  if (context.mounted) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginView()),
-                      (route) => false,
-                    );
-                  }
-                },
+                onTap: () => _confirmLogout(context, authVM, l10n),
               ),
               const SizedBox(height: 20),
             ],
           ),
         );
       },
+    );
+  }
+
+  void _confirmLogout(BuildContext context, AuthViewModel authVM, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text(l10n.logoutConfirm),
+          ],
+        ),
+        content: Text(l10n.logoutMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await authVM.signOut();
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginView()),
+                  (route) => false,
+                );
+              }
+            },
+            child: Text(l10n.logout),
+          ),
+        ],
+      ),
     );
   }
 
@@ -425,6 +530,18 @@ class _MainShellState extends State<MainShell>
                 icon: Icons.apartment_rounded,
                 title: l10n.properties,
                 item: NavItem.properties,
+                isDark: isDark,
+              ),
+              _buildSidebarItem(
+                icon: Icons.gavel_rounded,
+                title: l10n.lawyers,
+                item: NavItem.lawyers,
+                isDark: isDark,
+              ),
+              _buildSidebarItem(
+                icon: Icons.person_rounded,
+                title: l10n.myProfile,
+                item: NavItem.profile,
                 isDark: isDark,
               ),
               _buildSidebarItem(
@@ -484,17 +601,7 @@ class _MainShellState extends State<MainShell>
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () async {
-                    await authVM.signOut();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const LoginView()),
-                        (route) => false,
-                      );
-                    }
-                  },
+                  onTap: () => _confirmLogout(context, authVM, l10n),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),

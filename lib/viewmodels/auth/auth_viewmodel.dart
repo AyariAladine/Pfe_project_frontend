@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
+import '../../services/cache_service.dart';
 
 enum AuthState {
   initial,
@@ -200,6 +201,8 @@ class AuthViewModel extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       await _authService.signOut();
+      CacheService.instance.clear();
+      CacheService.instance.clearImages();
       _state = AuthState.unauthenticated;
       _selectedUserRole = null;
       _currentUser = null;
@@ -207,6 +210,17 @@ class AuthViewModel extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
+    }
+  }
+
+  /// Refresh current user profile from server
+  Future<void> refreshProfile() async {
+    try {
+      final user = await _authService.getProfile();
+      _currentUser = user;
+      notifyListeners();
+    } catch (_) {
+      // Silently ignore – profile view already shows errors
     }
   }
 

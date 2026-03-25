@@ -1,6 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../auth/login/login_view.dart';
 import '../home/main_shell.dart';
@@ -14,6 +19,9 @@ class SplashView extends StatefulWidget {
 }
 
 class _SplashViewState extends State<SplashView> {
+  bool _needsBiometric = false;
+  bool _biometricFailed = false;
+
   @override
   void initState() {
     super.initState();
@@ -21,36 +29,77 @@ class _SplashViewState extends State<SplashView> {
   }
 
   Future<void> _checkAuth() async {
-    // Give splash screen a brief moment to show
     await Future.delayed(const Duration(milliseconds: 500));
-
     if (!mounted) return;
 
     final authVM = context.read<AuthViewModel>();
-    
-    // Check if user has valid tokens and auto-login
     await authVM.initializeAuth();
-
     if (!mounted) return;
 
-    // Navigate based on auth state
     if (authVM.isAuthenticated) {
-      // User is logged in - go to main shell
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainShell()),
-      );
+      // Check if biometrics are required
+      if (!kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        final biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
+        if (biometricsEnabled) {
+          setState(() => _needsBiometric = true);
+          await _authenticateWithBiometrics();
+          return;
+        }
+      }
+      _goToMain();
     } else {
-      // User is not logged in - go to login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginView()),
-      );
+      _goToLogin();
     }
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    final localAuth = LocalAuthentication();
+    try {
+      final canCheck = await localAuth.canCheckBiometrics;
+      if (!canCheck) {
+        _goToMain();
+        return;
+      }
+
+      final authenticated = await localAuth.authenticate(
+        localizedReason: 'Unlock Aqari',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: false,
+        ),
+      );
+
+      if (!mounted) return;
+      if (authenticated) {
+        _goToMain();
+      } else {
+        setState(() => _biometricFailed = true);
+      }
+    } on PlatformException {
+      if (!mounted) return;
+      // Biometric not available or error — let them in
+      _goToMain();
+    }
+  }
+
+  void _goToMain() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const MainShell()),
+    );
+  }
+
+  void _goToLogin() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginView()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
@@ -79,8 +128,8 @@ class _SplashViewState extends State<SplashView> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.home_work_rounded,
+              child: Icon(
+                _needsBiometric ? Icons.fingerprint_rounded : Icons.home_work_rounded,
                 size: 60,
                 color: Colors.white,
               ),
@@ -105,15 +154,44 @@ class _SplashViewState extends State<SplashView> {
               ),
             ),
             const SizedBox(height: 40),
-            // Loading indicator
-            const SizedBox(
-              width: 30,
-              height: 30,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+
+            if (_biometricFailed) ...[
+              Text(
+                l10n?.unlockToAccess ?? 'Please unlock to access the app',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() => _biometricFailed = false);
+                  _authenticateWithBiometrics();
+                },
+                icon: const Icon(Icons.fingerprint),
+                label: Text(l10n?.unlockApp ?? 'Unlock'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // Loading indicator
+              const SizedBox(
+                width: 30,
+                height: 30,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+            ],
           ],
         ),
       ),

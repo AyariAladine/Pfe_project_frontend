@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../models/chat_message.dart';
 import '../../viewmodels/chatbot/chatbot_viewmodel.dart';
 
@@ -229,18 +230,17 @@ class _ChatHeader extends StatelessWidget {
   }
 
   void _confirmClear(BuildContext context, VoidCallback onConfirm) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Clear conversation?'),
-        content: const Text(
-          'All messages will be permanently removed.',
-        ),
+        title: Text(l10n.clearConversation),
+        content: Text(l10n.clearConversationMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
@@ -248,7 +248,7 @@ class _ChatHeader extends StatelessWidget {
               Navigator.pop(context);
               onConfirm();
             },
-            child: const Text('Clear'),
+            child: Text(l10n.clearAction),
           ),
         ],
       ),
@@ -544,7 +544,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             children: List.generate(3, (i) {
               return AnimatedBuilder(
                 animation: _dots[i],
-                builder: (_, __) => Container(
+                builder: (_, _) => Container(
                   margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
                   width: 8,
                   height: 8,

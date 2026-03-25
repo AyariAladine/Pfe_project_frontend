@@ -60,12 +60,13 @@ enum PropertyStatus {
 class PropertyModel {
   final String? id;
   final String propertyAddress;
+  final String? description;
   final String? longitude;
   final String? latitude;
   final PropertyType propertyType;
   final PropertyStatus propertyStatus;
   final String? contractId;
-  final String? propertyImage;
+  final List<String> propertyImages;
   final String? registrationDocument;
   final Map<String, dynamic>? owner;
   final DateTime? createdAt;
@@ -74,44 +75,45 @@ class PropertyModel {
   PropertyModel({
     this.id,
     required this.propertyAddress,
+    this.description,
     this.longitude,
     this.latitude,
     required this.propertyType,
     this.propertyStatus = PropertyStatus.unavailable,
     this.contractId,
-    this.propertyImage,
+    this.propertyImages = const [],
     this.registrationDocument,
     this.owner,
     this.createdAt,
     this.updatedAt,
   });
 
-  // Get full image URL
-  String? get imageUrl {
-    if (propertyImage == null || propertyImage!.isEmpty) return null;
-    
-    // If already a full URL, return as is (after validation)
-    if (propertyImage!.startsWith('http://') || propertyImage!.startsWith('https://')) {
-      // Only allow URLs from our own backend
-      if (propertyImage!.contains('localhost:3000') || 
-          propertyImage!.contains('10.64.158.95:3000')) {
-        return propertyImage;
-      }
-      // External URL - reject for security
-      return null;
+  /// Resolve a single image path to a full URL
+  static String? _resolveImageUrl(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) return null;
+
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
     }
-    
-    // Handle relative paths from backend (e.g., /uploads/properties/images/xxx.jpg)
-    // or just filenames (e.g., xxx.jpg)
-    if (propertyImage!.startsWith('/')) {
-      // Remove leading slash and build full URL
-      return '${ApiConstants.baseUrl}$propertyImage';
+
+    if (imagePath.startsWith('/')) {
+      return '${ApiConstants.baseUrl}$imagePath';
     }
-    
-    // Just a filename - construct full path
-    final filename = propertyImage!.split('/').last;
+
+    final filename = imagePath.split('/').last;
     return '${ApiConstants.baseUrl}/uploads/properties/images/$filename';
   }
+
+  /// Get full URLs for all property images
+  List<String> get imageUrls {
+    return propertyImages
+        .map((p) => _resolveImageUrl(p))
+        .whereType<String>()
+        .toList();
+  }
+
+  /// Convenience: first image URL (backward compat for list cards etc.)
+  String? get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : null;
 
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
     // Parse owner - can be a string (ID) or a populated object
@@ -123,6 +125,7 @@ class PropertyModel {
     return PropertyModel(
       id: json['_id'] as String? ?? json['id'] as String?,
       propertyAddress: json['Propertyaddresse'] as String? ?? '',
+      description: json['description'] as String?,
       longitude: json['longitude'] as String?,
       latitude: json['latitude'] as String?,
       propertyType: PropertyType.fromJson(json['PropertyType'] as String? ?? 'rent'),
@@ -130,7 +133,7 @@ class PropertyModel {
         json['propertyStatus'] as String? ?? 'unavailable',
       ),
       contractId: json['contractId'] as String?,
-      propertyImage: json['propertyimage'] as String?,
+      propertyImages: _parseImages(json),
       registrationDocument: json['Registrationdocument'] as String?,
       owner: ownerData,
       createdAt: json['createdAt'] != null
@@ -142,18 +145,37 @@ class PropertyModel {
     );
   }
 
+  /// Parse images from JSON – handles both array and legacy single-string
+  static List<String> _parseImages(Map<String, dynamic> json) {
+    // New format: array (try both casings)
+    final images = json['propertyimages'] ?? json['propertyImages'];
+    if (images is List && images.isNotEmpty) {
+      return images.map((e) => e.toString()).toList();
+    }
+    // Legacy single-string field (try both casings)
+    final single = (json['propertyimage'] ?? json['propertyImage']) as String?;
+    if (single != null && single.isNotEmpty) {
+      return [single];
+    }
+    return [];
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'Propertyaddresse': propertyAddress,
+      if (description != null) 'description': description,
       if (longitude != null) 'longitude': longitude,
       if (latitude != null) 'latitude': latitude,
       'PropertyType': propertyType.toJson(),
       'propertyStatus': propertyStatus.toJson(),
       if (contractId != null) 'contractId': contractId,
-      if (propertyImage != null) 'propertyimage': propertyImage,
+      if (propertyImages.isNotEmpty) 'propertyimages': propertyImages,
       if (registrationDocument != null) 'Registrationdocument': registrationDocument,
     };
   }
+
+  /// Get owner's ID
+  String? get ownerId => owner?['_id'] as String? ?? owner?['id'] as String?;
 
   /// Get owner's display name
   String? get ownerName {
@@ -169,12 +191,13 @@ class PropertyModel {
   PropertyModel copyWith({
     String? id,
     String? propertyAddress,
+    String? description,
     String? longitude,
     String? latitude,
     PropertyType? propertyType,
     PropertyStatus? propertyStatus,
     String? contractId,
-    String? propertyImage,
+    List<String>? propertyImages,
     String? registrationDocument,
     Map<String, dynamic>? owner,
     DateTime? createdAt,
@@ -183,12 +206,13 @@ class PropertyModel {
     return PropertyModel(
       id: id ?? this.id,
       propertyAddress: propertyAddress ?? this.propertyAddress,
+      description: description ?? this.description,
       longitude: longitude ?? this.longitude,
       latitude: latitude ?? this.latitude,
       propertyType: propertyType ?? this.propertyType,
       propertyStatus: propertyStatus ?? this.propertyStatus,
       contractId: contractId ?? this.contractId,
-      propertyImage: propertyImage ?? this.propertyImage,
+      propertyImages: propertyImages ?? this.propertyImages,
       registrationDocument: registrationDocument ?? this.registrationDocument,
       owner: owner ?? this.owner,
       createdAt: createdAt ?? this.createdAt,
@@ -200,6 +224,7 @@ class PropertyModel {
 /// DTO for creating a property
 class CreatePropertyDto {
   final String propertyAddress;
+  final String? description;
   final String? longitude;
   final String? latitude;
   final PropertyType propertyType;
@@ -210,6 +235,7 @@ class CreatePropertyDto {
 
   CreatePropertyDto({
     required this.propertyAddress,
+    this.description,
     this.longitude,
     this.latitude,
     required this.propertyType,
@@ -222,6 +248,7 @@ class CreatePropertyDto {
   Map<String, dynamic> toJson() {
     return {
       'Propertyaddresse': propertyAddress,
+      if (description != null && description!.isNotEmpty) 'description': description,
       if (longitude != null) 'longitude': longitude,
       if (latitude != null) 'latitude': latitude,
       'PropertyType': propertyType.toJson(),

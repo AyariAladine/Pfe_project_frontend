@@ -30,8 +30,8 @@ class PropertyWizardViewModel extends ChangeNotifier {
 
   // Property data
   PropertyType _selectedPropertyType = PropertyType.rent;
-  // Default to unavailable - user needs to prove legal documents before property can be available
-  PropertyStatus _selectedPropertyStatus = PropertyStatus.unavailable;
+  // Default to available
+  PropertyStatus _selectedPropertyStatus = PropertyStatus.available;
 
   // Photos - store as bytes for web compatibility
   final List<Uint8List> _propertyImages = [];
@@ -342,35 +342,33 @@ class PropertyWizardViewModel extends ChangeNotifier {
         propertyAddress: propertyAddressController.text.trim(),
         propertyType: _selectedPropertyType,
         propertyStatus: _selectedPropertyStatus,
+        description: descriptionController.text.trim().isNotEmpty
+            ? descriptionController.text.trim()
+            : null,
         latitude: _latitude?.toString(),
         longitude: _longitude?.toString(),
       );
 
-      // Generate timestamp-based filename
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      // Create property (no image – images uploaded separately)
+      _createdProperty = await _propertyService.createProperty(dto);
 
-      // Create property with optional first image in single request
-      _createdProperty = await _propertyService.createProperty(
-        dto,
-        imageBytes: _propertyImages.isNotEmpty ? _propertyImages.first : null,
-        imageFileName: _propertyImages.isNotEmpty
-            ? 'property_${timestamp}_0.jpg'
-            : null,
-      );
-
-      // Upload additional images if any
-      if (_propertyImages.length > 1 && _createdProperty != null && _createdProperty!.id != null) {
+      // Upload all images if any
+      if (_propertyImages.isNotEmpty && _createdProperty != null && _createdProperty!.id != null) {
         try {
-          for (int i = 1; i < _propertyImages.length; i++) {
-            await _propertyService.uploadPropertyImage(
-              _createdProperty!.id!,
-              imageBytes: _propertyImages[i],
-              fileName: 'property_${timestamp}_$i.jpg',
-            );
-          }
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final allBytes = _propertyImages.toList();
+          final allNames = List.generate(
+            allBytes.length,
+            (i) => 'property_${timestamp}_$i.jpg',
+          );
+          _createdProperty = await _propertyService.uploadPropertyImages(
+            _createdProperty!.id!,
+            allImageBytes: allBytes,
+            allFileNames: allNames,
+          );
         } catch (uploadError) {
-          // Property created but additional image upload failed
-          _error = 'Property created but some image uploads failed: $uploadError';
+          // Property created but image upload failed
+          _error = 'Property created but image uploads failed: $uploadError';
           _isLoading = false;
           notifyListeners();
           return true; // Still return true since property was created

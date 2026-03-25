@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../services/cache_service.dart';
 import '../../services/token_service.dart';
 
 /// Network image widget that includes auth token in headers
@@ -47,6 +48,18 @@ class _NetworkImageWithAuthState extends State<NetworkImageWithAuth> {
   }
 
   Future<void> _loadImage() async {
+    // Check memory cache first
+    final cached = CacheService.instance.getImage(widget.imageUrl);
+    if (cached != null) {
+      if (mounted) {
+        setState(() {
+          _imageBytes = cached;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -63,6 +76,8 @@ class _NetworkImageWithAuthState extends State<NetworkImageWithAuth> {
       );
 
       if (response.statusCode == 200) {
+        // Store in cache
+        CacheService.instance.putImage(widget.imageUrl, response.bodyBytes);
         if (mounted) {
           setState(() {
             _imageBytes = response.bodyBytes;

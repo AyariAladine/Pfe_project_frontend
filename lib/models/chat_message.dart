@@ -32,6 +32,32 @@ class ChatMessage {
       isError: isError ?? this.isError,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'text': text,
+    'isUser': isUser,
+    'timestamp': timestamp.toIso8601String(),
+    'sources': sources.map((s) => s.toJson()).toList(),
+    'language': language,
+    'geminiModel': geminiModel,
+    'isError': isError,
+  };
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      id: json['id'] as String,
+      text: json['text'] as String,
+      isUser: json['isUser'] as bool,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      sources: (json['sources'] as List<dynamic>?)
+          ?.map((s) => LegalSource.fromJson(s as Map<String, dynamic>))
+          .toList() ?? [],
+      language: json['language'] as String?,
+      geminiModel: json['geminiModel'] as String?,
+      isError: json['isError'] as bool? ?? false,
+    );
+  }
 }
 
 /// A legal article source returned by the RAG pipeline.
@@ -62,4 +88,13 @@ class LegalSource {
       page: json['page'] as int?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'chunk_id': chunkId,
+    'law_num': lawNum,
+    'article_num': articleNum,
+    'text': text,
+    'score': score,
+    'page': page,
+  };
 }

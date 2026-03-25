@@ -1,10 +1,13 @@
 /// API Constants for the NestJS backend
 class ApiConstants {
  
-  static const String baseUrl = 'http://10.72.57.118:3000';
+  static const String baseUrl = 'http://10.122.213.118:3000';
 
-  /// Python RAG / Gemini micro-service (Flask on port 6000)
   static const String chatbotBaseUrl = 'http://localhost:7001';
+
+  /// Lawyer verification scraper service
+  static const String scraperBaseUrl = 'http://localhost:7002';
+  static const String verifyLawyerUrl = '$scraperBaseUrl/verify-lawyer';
   
   // Auth endpoints
   static const String login = '/auth/login';
@@ -15,9 +18,20 @@ class ApiConstants {
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
   static const String googleAuth = '/auth/google';
+
+  // SMS OTP endpoints
+  static const String sendOtp = '/auth/send-otp';
+  static const String verifyOtp = '/auth/verify-otp';
   
  
   static const String users = '/users';
+  static String userProfile(String id) => '/users/$id/profile';
+
+  // Lawyers endpoints
+  static const String lawyers = '/lawyers';
+  static String lawyerById(String id) => '/lawyers/$id';
+  static String lawyerProfile(String id) => '/lawyers/$id/profile';
+  static String lawyerVerify(String id) => '/lawyers/$id/verify';
 
   static const String properties = '/property';
 
@@ -43,7 +57,17 @@ class ApiConstants {
     final filename = imagePath.split('/').last;
     return '$baseUrl/uploads/properties/images/$filename';
   }
-  
+
+  /// Build URL for lawyer picture
+  static String getLawyerPictureUrl(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) return '';
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    final filename = imagePath.split('/').last;
+    return '$baseUrl/uploads/lawyers/pictures/$filename';
+  }
+
   // Headers
   static Map<String, String> get headers => {
     'Content-Type': 'application/json',
