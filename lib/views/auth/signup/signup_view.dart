@@ -328,8 +328,8 @@ class _SignupViewContent extends StatelessWidget {
         // User Type Selection
         UserTypeCard(
           userType: UserRole.user,
-          title: l10n.translate('user'),
-          subtitle: l10n.translate('userDesc'),
+          title: l10n.user,
+          subtitle: l10n.userDesc,
           icon: Icons.person_rounded,
           isSelected: signupVM.selectedUserRole == UserRole.user,
           onTap: () => signupVM.setUserRole(UserRole.user),
@@ -374,7 +374,7 @@ class _SignupViewContent extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                l10n.translate('or'),
+                l10n.or,
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 14,
@@ -441,7 +441,7 @@ class _SignupViewContent extends StatelessWidget {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(l10n.translate('googleSignInFailed')),
+                    content: Text(l10n.googleSignInFailed),
                     backgroundColor: AppColors.error,
                   ),
                 );
@@ -787,7 +787,7 @@ class _GoogleSignUpButton extends StatelessWidget {
                 const SizedBox(width: 12),
                 Flexible(
                   child: Text(
-                    l10n.translate('continueWithGoogle'),
+                    l10n.continueWithGoogle,
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 15,
@@ -813,7 +813,7 @@ Future<UserRole?> _showRoleSelectionDialog(BuildContext context, AppLocalization
           borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
-          l10n.translate('selectYourRole'),
+          l10n.selectYourRole,
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 20,
@@ -824,7 +824,7 @@ Future<UserRole?> _showRoleSelectionDialog(BuildContext context, AppLocalization
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              l10n.translate('selectRoleDescription'),
+              l10n.selectRoleDescription,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary,
@@ -835,16 +835,16 @@ Future<UserRole?> _showRoleSelectionDialog(BuildContext context, AppLocalization
             _RoleSelectionTile(
               role: UserRole.user,
               icon: Icons.person_outline,
-              title: l10n.translate('user'),
-              description: l10n.translate('userDescription'),
+              title: l10n.user,
+              description: l10n.userDescription,
               onTap: () => Navigator.of(context).pop(UserRole.user),
             ),
             const SizedBox(height: 12),
             _RoleSelectionTile(
               role: UserRole.lawyer,
               icon: Icons.gavel_outlined,
-              title: l10n.translate('lawyer'),
-              description: l10n.translate('lawyerDescription'),
+              title: l10n.lawyer,
+              description: l10n.lawyerDescription,
               onTap: () => Navigator.of(context).pop(UserRole.lawyer),
             ),
           ],
@@ -853,7 +853,7 @@ Future<UserRole?> _showRoleSelectionDialog(BuildContext context, AppLocalization
           TextButton(
             onPressed: () => Navigator.of(context).pop(null),
             child: Text(
-              l10n.translate('cancel'),
+              l10n.cancel,
               style: TextStyle(color: AppColors.textSecondary),
             ),
           ),

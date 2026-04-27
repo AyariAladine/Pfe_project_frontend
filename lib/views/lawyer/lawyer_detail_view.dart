@@ -73,7 +73,7 @@ class _LawyerDetailContentState extends State<LawyerDetailContent> {
 
               // Contact information card
               _buildInfoCard(
-                title: l10n.translate('contactInfo'),
+                title: l10n.contactInfo,
                 icon: Icons.contact_mail_rounded,
                 isDark: isDark,
                 children: [
@@ -97,13 +97,13 @@ class _LawyerDetailContentState extends State<LawyerDetailContent> {
 
               // Professional information card
               _buildInfoCard(
-                title: l10n.translate('professionalInfo'),
+                title: l10n.professionalInfo,
                 icon: Icons.work_outline_rounded,
                 isDark: isDark,
                 children: [
                   _buildInfoRow(
                     Icons.badge_outlined,
-                    l10n.translate('role'),
+                    l10n.role,
                     l10n.lawyer,
                     isDark,
                   ),
@@ -131,13 +131,13 @@ class _LawyerDetailContentState extends State<LawyerDetailContent> {
               // Account details card
               if (lawyer.createdAt != null)
                 _buildInfoCard(
-                  title: l10n.translate('accountDetails'),
+                  title: l10n.accountDetails,
                   icon: Icons.info_outline_rounded,
                   isDark: isDark,
                   children: [
                     _buildInfoRow(
                       Icons.calendar_today_outlined,
-                      l10n.translate('memberSince'),
+                      l10n.memberSince,
                       _formatDate(lawyer.createdAt!, l10n),
                       isDark,
                     ),

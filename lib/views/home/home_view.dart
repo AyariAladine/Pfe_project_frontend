@@ -461,7 +461,7 @@ class _HomeViewState extends State<HomeView>
                 leading: const Icon(Icons.verified_user_rounded),
                 title: Text(l10n.verifyIdentity),
                 subtitle: Text(
-                  l10n.translate('verifyIdentitySubtitle'),
+                  l10n.verifyIdentitySubtitle,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,

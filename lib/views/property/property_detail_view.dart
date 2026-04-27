@@ -7,9 +7,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../models/application_model.dart';
 import '../../models/property_model.dart';
 import '../../services/favorites_service.dart';
 import '../../services/token_service.dart';
+import '../../viewmodels/property/application_viewmodel.dart';
 import '../widgets/network_image_with_auth.dart';
 
 /// Embeddable property detail content (no Scaffold) for use inside MainShell
@@ -35,6 +37,7 @@ class PropertyDetailContent extends StatefulWidget {
 
 class _PropertyDetailContentState extends State<PropertyDetailContent> {
   String? _currentUserId;
+  final ApplicationViewModel _applicationVM = ApplicationViewModel();
 
   @override
   void initState() {
@@ -44,11 +47,24 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
 
   Future<void> _loadUserId() async {
     final id = await TokenService.getUserId();
-    if (mounted) setState(() => _currentUserId = id);
+    if (mounted) {
+      setState(() => _currentUserId = id);
+      // Check if user already applied for this property
+      if (property.id != null && !_isOwned) {
+        _applicationVM.checkExistingApplication(property.id!);
+        _applicationVM.addListener(_onApplicationVMChanged);
+      }
+    }
+  }
+
+  void _onApplicationVMChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _applicationVM.removeListener(_onApplicationVMChanged);
+    _applicationVM.dispose();
     super.dispose();
   }
 
@@ -95,7 +111,7 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
               IconButton(
                 icon: const Icon(Icons.share_outlined),
                 color: AppColors.primary,
-                tooltip: l10n.translate('share'),
+                tooltip: l10n.share,
                 onPressed: () => _shareProperty(l10n),
               ),
               IconButton(
@@ -222,7 +238,7 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
           // Account details (timestamps)
           if (property.createdAt != null)
             _buildInfoCard(
-              title: l10n.translate('accountDetails'),
+              title: l10n.accountDetails,
               icon: Icons.info_outline_rounded,
               isDark: isDark,
               children: [
@@ -241,9 +257,413 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
                   ),
               ],
             ),
+
+          // ── Apply for Property section (non-owners only) ──
+          if (!_isOwned && property.id != null && property.propertyStatus == PropertyStatus.available)
+            _buildApplySection(l10n, isDark),
         ],
       ),
     );
+  }
+
+  // ─── Apply for Property Section ────────────────────────────────────
+
+  Widget _buildApplySection(AppLocalizations l10n, bool isDark) {
+    final vm = _applicationVM;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.border,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Section title
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.send_rounded,
+                        color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n.applyForProperty,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Already applied state
+              if (vm.hasApplied) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _getApplicationStatusColor(
+                            vm.existingApplication!.status)
+                        .withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _getApplicationStatusIcon(
+                            vm.existingApplication!.status),
+                        color: _getApplicationStatusColor(
+                            vm.existingApplication!.status),
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.alreadyApplied,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: _getApplicationStatusColor(
+                                    vm.existingApplication!.status),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${l10n.status}: ${_localizedStatus(l10n, vm.existingApplication!.status)}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (vm.existingApplication!.status ==
+                    ApplicationStatus.pending) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: vm.isApplying
+                        ? null
+                        : () => _confirmCancelApplication(
+                            l10n, isDark, vm.existingApplication!.id),
+                    icon: const Icon(Icons.cancel_outlined, size: 18),
+                    label: Text(l10n.cancelApplication),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ],
+              ],
+
+              // Not yet applied — show Apply buttons
+              if (!vm.hasApplied) ...[
+                if (property.propertyType == PropertyType.rent)
+                  _buildApplyButton(
+                    label: l10n.applyToRent,
+                    icon: Icons.vpn_key_rounded,
+                    type: ApplicationType.rent,
+                    l10n: l10n,
+                    isDark: isDark,
+                  ),
+                if (property.propertyType == PropertyType.sale)
+                  _buildApplyButton(
+                    label: l10n.applyToBuy,
+                    icon: Icons.shopping_cart_rounded,
+                    type: ApplicationType.buy,
+                    l10n: l10n,
+                    isDark: isDark,
+                  ),
+              ],
+
+              // Feedback message
+              if (vm.applyMessage != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: vm.applyMessage == 'APPLICATION_SUBMITTED'
+                        ? AppColors.success.withValues(alpha: 0.08)
+                        : vm.applyMessage == 'APPLICATION_CANCELLED'
+                            ? AppColors.warning.withValues(alpha: 0.08)
+                            : AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _localizedApplyMessage(l10n, vm.applyMessage!),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: vm.applyMessage == 'APPLICATION_SUBMITTED'
+                          ? AppColors.success
+                          : vm.applyMessage == 'APPLICATION_CANCELLED'
+                              ? AppColors.warning
+                              : AppColors.error,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildApplyButton({
+    required String label,
+    required IconData icon,
+    required ApplicationType type,
+    required AppLocalizations l10n,
+    required bool isDark,
+  }) {
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: _applicationVM.isApplying
+            ? null
+            : () => _showApplyDialog(l10n, isDark, type),
+        icon: _applicationVM.isApplying
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white))
+            : Icon(icon, size: 20),
+        label: Text(label, style: const TextStyle(fontSize: 15)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showApplyDialog(
+      AppLocalizations l10n, bool isDark, ApplicationType type) {
+    final messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          type == ApplicationType.rent ? l10n.applyToRent : l10n.applyToBuy,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              property.propertyAddress,
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: messageController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: l10n.applicationMessage,
+                hintText: l10n.applicationMessageHint,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _applicationVM.applyForProperty(
+                propertyId: property.id!,
+                type: type,
+                message: messageController.text.trim().isEmpty
+                    ? null
+                    : messageController.text.trim(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(l10n.submitApplication),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmCancelApplication(
+      AppLocalizations l10n, bool isDark, String applicationId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(l10n.cancelApplication),
+        content: Text(l10n.cancelApplicationConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _applicationVM.cancelApplication(applicationId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(l10n.cancelApplication),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getApplicationStatusColor(ApplicationStatus status) {
+    switch (status) {
+      case ApplicationStatus.pending:
+        return AppColors.warning;
+      case ApplicationStatus.underReview:
+        return AppColors.info;
+      case ApplicationStatus.visitScheduled:
+        return AppColors.primary;
+      case ApplicationStatus.preApproved:
+        return const Color(0xFF7C4DFF);
+      case ApplicationStatus.accepted:
+        return AppColors.success;
+      case ApplicationStatus.negotiation:
+        return Colors.orange;
+      case ApplicationStatus.awaitingLawyer:
+        return Colors.indigo;
+      case ApplicationStatus.contractDrafting:
+        return AppColors.primary;
+      case ApplicationStatus.rejected:
+        return AppColors.error;
+      case ApplicationStatus.cancelled:
+        return AppColors.textSecondary;
+    }
+  }
+
+  IconData _getApplicationStatusIcon(ApplicationStatus status) {
+    switch (status) {
+      case ApplicationStatus.pending:
+        return Icons.hourglass_top_rounded;
+      case ApplicationStatus.underReview:
+        return Icons.rate_review_rounded;
+      case ApplicationStatus.visitScheduled:
+        return Icons.calendar_month_rounded;
+      case ApplicationStatus.preApproved:
+        return Icons.thumb_up_rounded;
+      case ApplicationStatus.accepted:
+        return Icons.check_circle_rounded;
+      case ApplicationStatus.negotiation:
+        return Icons.attach_money_rounded;
+      case ApplicationStatus.awaitingLawyer:
+        return Icons.gavel_rounded;
+      case ApplicationStatus.contractDrafting:
+        return Icons.description_rounded;
+      case ApplicationStatus.rejected:
+        return Icons.cancel_rounded;
+      case ApplicationStatus.cancelled:
+        return Icons.block_rounded;
+    }
+  }
+
+  String _localizedStatus(AppLocalizations l10n, ApplicationStatus status) {
+    switch (status) {
+      case ApplicationStatus.pending:
+        return l10n.applicationStatusPending;
+      case ApplicationStatus.underReview:
+        return l10n.applicationStatusUnderReview;
+      case ApplicationStatus.visitScheduled:
+        return l10n.applicationStatusVisitScheduled;
+      case ApplicationStatus.preApproved:
+        return l10n.applicationStatusPreApproved;
+      case ApplicationStatus.accepted:
+        return l10n.applicationStatusAccepted;
+      case ApplicationStatus.negotiation:
+        return l10n.applicationStatusNegotiation;
+      case ApplicationStatus.awaitingLawyer:
+        return l10n.applicationStatusAwaitingLawyer;
+      case ApplicationStatus.contractDrafting:
+        return l10n.applicationStatusContractDrafting;
+      case ApplicationStatus.rejected:
+        return l10n.applicationStatusRejected;
+      case ApplicationStatus.cancelled:
+        return l10n.applicationStatusCancelled;
+    }
+  }
+
+  String _localizedApplyMessage(AppLocalizations l10n, String msg) {
+    switch (msg) {
+      case 'APPLICATION_SUBMITTED':
+        return l10n.applicationSubmitted;
+      case 'APPLICATION_CANCELLED':
+        return l10n.applicationCancelled;
+      default:
+        return msg;
+    }
   }
 
   // ─── Property Header Card (catalog style) ─────────────────────────

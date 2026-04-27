@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:device_info_plus/device_info_plus.dart';
 import '../core/constants/api_constants.dart';
 import '../models/user_model.dart';
@@ -119,7 +119,7 @@ class AuthService {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('فشل في إنشاء الحساب: $e');
+      throw ApiException(ErrorCodes.unexpectedError);
     }
   }
 
@@ -164,7 +164,7 @@ class AuthService {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('فشل في تسجيل الدخول: $e');
+      throw ApiException(ErrorCodes.unexpectedError);
     }
   }
 
@@ -182,7 +182,7 @@ class AuthService {
         requiresAuth: true,
       );
 
-      print('Profile response: $response');
+      debugPrint('Profile response: $response');
 
       // Response is the user object directly, not wrapped in 'user'
       _currentUser = UserModel.fromJson(response);
@@ -207,11 +207,11 @@ class AuthService {
         body: {'email': email},
       );
 
-      return response['message'] as String? ?? 'تم إرسال رمز التحقق';
+      return response['message'] as String? ?? 'CODE_SENT';
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('فشل في إرسال رمز التحقق: $e');
+      throw ApiException(ErrorCodes.unexpectedError);
     }
   }
 
@@ -226,11 +226,11 @@ class AuthService {
         body: {'code': code, 'newPassword': newPassword},
       );
 
-      return response['message'] as String? ?? 'تم تغيير كلمة المرور بنجاح';
+      return response['message'] as String? ?? 'PASSWORD_CHANGED';
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('فشل في تغيير كلمة المرور: $e');
+      throw ApiException(ErrorCodes.unexpectedError);
     }
   }
 

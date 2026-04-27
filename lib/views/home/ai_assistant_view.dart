@@ -100,7 +100,6 @@ class _AiAssistantBodyState extends State<_AiAssistantBody> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ChatbotViewModel>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [

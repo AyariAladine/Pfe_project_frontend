@@ -9,14 +9,20 @@ import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../widgets/language_selector.dart';
 import '../auth/login/login_view.dart';
 import '../onboarding/onboarding_view.dart';
+import '../settings/settings_view.dart';
 import '../property/property_list_view.dart';
 import '../property/property_detail_view.dart';
 import '../property/edit_property_view.dart';
 import '../property/create_property_wizard_view.dart';
+import '../property/my_applications_view.dart';
+import '../property/incoming_applications_view.dart';
+import '../property/application_detail_view.dart';
 import '../lawyer/lawyer_list_view.dart';
 import '../lawyer/lawyer_detail_view.dart';
 import '../lawyer/lawyer_profile_view.dart';
 import '../user/user_profile_view.dart';
+import '../contract/contracts_list_view.dart';
+import '../contract/lawyer_cases_view.dart';
 import 'ai_assistant_view.dart';
 import 'home_content.dart';
 
@@ -25,6 +31,8 @@ enum NavItem {
   home,
   properties,
   addProperty,
+  myApplications,
+  incomingApplications,
   lawyers,
   profile,
   contracts,
@@ -52,6 +60,7 @@ class _MainShellState extends State<MainShell>
   PropertyModel? _selectedProperty; // Currently selected property for detail view
   PropertyModel? _editingProperty; // Currently editing property
   UserModel? _selectedLawyer; // Currently selected lawyer for detail view
+  String? _selectedApplicationId; // Currently selected application for detail view
 
   @override
   void initState() {
@@ -87,6 +96,7 @@ class _MainShellState extends State<MainShell>
       _selectedProperty = null; // Clear detail view when switching pages
       _editingProperty = null; // Clear edit view when switching pages
       _selectedLawyer = null;  // Clear lawyer detail when switching pages
+      _selectedApplicationId = null; // Clear application detail when switching pages
     });
     // On narrow screens / mobile close the drawer; on wide web the sidebar stays open
     final isWideScreen = kIsWeb && MediaQuery.of(context).size.width >= 768;
@@ -182,6 +192,16 @@ class _MainShellState extends State<MainShell>
         return l10n.properties;
       case NavItem.addProperty:
         return l10n.addProperty;
+      case NavItem.myApplications:
+        if (_selectedApplicationId != null) {
+          return l10n.applicationDetail;
+        }
+        return l10n.myApplications;
+      case NavItem.incomingApplications:
+        if (_selectedApplicationId != null) {
+          return l10n.applicationDetail;
+        }
+        return l10n.incomingApplications;
       case NavItem.lawyers:
         if (_selectedLawyer != null) {
           return l10n.lawyerDetails;
@@ -307,58 +327,44 @@ class _MainShellState extends State<MainShell>
         }
         return const UserProfileContent();
       case NavItem.contracts:
-        return _buildPlaceholder('Contracts', Icons.description_rounded);
+        final contractAuthVM = context.read<AuthViewModel>();
+        return ContractsListContent(
+          userRole: contractAuthVM.currentUser?.role ?? UserRole.user,
+        );
       case NavItem.cases:
-        return _buildPlaceholder('Cases', Icons.gavel_rounded);
+        return const LawyerCasesContent();
+      case NavItem.myApplications:
+        if (_selectedApplicationId != null) {
+          return ApplicationDetailContent(
+            applicationId: _selectedApplicationId!,
+            onBack: () => setState(() => _selectedApplicationId = null),
+          );
+        }
+        return MyApplicationsContent(
+          onViewProperty: (propertyId) {
+            setState(() => _currentPage = NavItem.properties);
+          },
+          onApplicationSelected: (applicationId) {
+            setState(() => _selectedApplicationId = applicationId);
+          },
+        );
+      case NavItem.incomingApplications:
+        if (_selectedApplicationId != null) {
+          return ApplicationDetailContent(
+            applicationId: _selectedApplicationId!,
+            onBack: () => setState(() => _selectedApplicationId = null),
+          );
+        }
+        return IncomingApplicationsContent(
+          onApplicationSelected: (applicationId) {
+            setState(() => _selectedApplicationId = applicationId);
+          },
+        );
       case NavItem.aiAssistant:
         return const AiAssistantContent();
       case NavItem.settings:
-        return _buildPlaceholder('Settings', Icons.settings_rounded);
+        return const SettingsContent();
     }
-  }
-
-  Widget _buildPlaceholder(String title, IconData icon) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: (isDark ? AppColors.primaryLight : AppColors.primary)
-                  .withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Icon(
-              icon,
-              size: 50,
-              color: isDark ? AppColors.primaryLight : AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Coming Soon',
-            style: TextStyle(
-              fontSize: 16,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildDrawer(AppLocalizations l10n, bool isDark) {
@@ -377,6 +383,16 @@ class _MainShellState extends State<MainShell>
                 icon: Icons.apartment_rounded,
                 title: l10n.properties,
                 item: NavItem.properties,
+              ),
+              _buildDrawerItem(
+                icon: Icons.send_rounded,
+                title: l10n.myApplications,
+                item: NavItem.myApplications,
+              ),
+              _buildDrawerItem(
+                icon: Icons.inbox_rounded,
+                title: l10n.incomingApplications,
+                item: NavItem.incomingApplications,
               ),
               _buildDrawerItem(
                 icon: Icons.gavel_rounded,
@@ -530,6 +546,18 @@ class _MainShellState extends State<MainShell>
                 icon: Icons.apartment_rounded,
                 title: l10n.properties,
                 item: NavItem.properties,
+                isDark: isDark,
+              ),
+              _buildSidebarItem(
+                icon: Icons.send_rounded,
+                title: l10n.myApplications,
+                item: NavItem.myApplications,
+                isDark: isDark,
+              ),
+              _buildSidebarItem(
+                icon: Icons.inbox_rounded,
+                title: l10n.incomingApplications,
+                item: NavItem.incomingApplications,
                 isDark: isDark,
               ),
               _buildSidebarItem(

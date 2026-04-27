@@ -3,18 +3,34 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/user_model.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/face_recognition_service.dart';
+import '../../services/signature_service.dart';
 import '../../services/lawyer_service.dart';
 
 /// ViewModel for the lawyer profile editing screen
 class LawyerProfileViewModel extends ChangeNotifier {
   final LawyerService _lawyerService = LawyerService();
   final ImagePicker _imagePicker = ImagePicker();
+  final FaceRecognitionService _faceService = FaceRecognitionService();
+  final SignatureService _signatureService = SignatureService();
 
   UserModel? _lawyer;
   bool _isLoading = false;
   bool _isSaving = false;
   String? _errorMessage;
   String? _successMessage;
+
+  // Face recognition state
+  bool _faceRegistered = false;
+  bool _isFaceProcessing = false;
+  String? _faceMessage;
+  double? _faceConfidence;
+
+  // Signature state
+  String? _signatureUrl;
+  bool _isSignatureProcessing = false;
+  String? _signatureMessage;
 
   // Text editing controllers for editable fields
   final TextEditingController nameController = TextEditingController();
@@ -58,6 +74,18 @@ class LawyerProfileViewModel extends ChangeNotifier {
   bool get hasLocation => _latitude != null && _longitude != null;
   bool get hasChanges => _hasChanges;
 
+  // Face recognition getters
+  bool get faceRegistered => _faceRegistered;
+  bool get isFaceProcessing => _isFaceProcessing;
+  String? get faceMessage => _faceMessage;
+  double? get faceConfidence => _faceConfidence;
+
+  // Signature getters
+  String? get signatureUrl => _signatureUrl;
+  bool get hasSignature => _signatureUrl != null && _signatureUrl!.isNotEmpty;
+  bool get isSignatureProcessing => _isSignatureProcessing;
+  String? get signatureMessage => _signatureMessage;
+
   /// Mark that something changed (called from UI when text fields change)
   void markChanged() {
     if (!_hasChanges) {
@@ -77,6 +105,8 @@ class LawyerProfileViewModel extends ChangeNotifier {
       _latitude = _lawyer?.latitude;
       _longitude = _lawyer?.longitude;
       _isVerified = _lawyer?.isVerified;
+      _faceRegistered = _lawyer?.faceRegistered ?? false;
+      _signatureUrl = _lawyer?.signatureUrl;
 
       // Populate text controllers
       nameController.text = _lawyer?.name ?? '';
@@ -143,8 +173,8 @@ class LawyerProfileViewModel extends ChangeNotifier {
     if (_lawyer == null) return;
 
     final fullName = '${_lawyer!.name} ${_lawyer!.lastName}'.trim();
-    final cin = _lawyer!.identityNumber ?? '';
-    final phone = _lawyer!.phoneNumber ?? '';
+    final cin = _lawyer!.identityNumber;
+    final phone = _lawyer!.phoneNumber;
     if (fullName.isEmpty || cin.isEmpty || phone.isEmpty) return;
 
     _isVerifying = true;
@@ -242,7 +272,138 @@ class LawyerProfileViewModel extends ChangeNotifier {
   void clearMessages() {
     _errorMessage = null;
     _successMessage = null;
+    _faceMessage = null;
+    _faceConfidence = null;
+    _signatureMessage = null;
     notifyListeners();
+  }
+
+  // ─── Face Recognition ──────────────────────────────────────────────
+
+  Future<void> registerFace(Uint8List imageBytes) async {
+    if (_lawyer == null) return;
+    _isFaceProcessing = true;
+    _faceMessage = null;
+    notifyListeners();
+
+    final result = await _faceService.registerFace(
+      userEmail: _lawyer!.email,
+      imageBytes: imageBytes,
+    );
+
+    _isFaceProcessing = false;
+    if (result.success) {
+      _faceRegistered = true;
+      _faceMessage = 'FACE_REGISTERED';
+    } else {
+      _faceMessage = result.message;
+    }
+    notifyListeners();
+  }
+
+  Future<void> verifyFace(Uint8List imageBytes) async {
+    _isFaceProcessing = true;
+    _faceMessage = null;
+    _faceConfidence = null;
+    notifyListeners();
+
+    final result = await _faceService.recognizeFace(imageBytes: imageBytes);
+
+    _isFaceProcessing = false;
+    if (result.success && result.userId != null) {
+      _faceConfidence = result.confidence;
+      if (result.confidence != null && result.confidence! < 0.60) {
+        _faceMessage = 'FACE_LOW_CONFIDENCE';
+      } else {
+        _faceMessage = 'FACE_VERIFIED';
+      }
+    } else {
+      _faceMessage = 'FACE_NOT_RECOGNIZED';
+    }
+    notifyListeners();
+  }
+
+  Future<void> removeFace(String password) async {
+    if (_lawyer == null) return;
+    _isFaceProcessing = true;
+    _faceMessage = null;
+    notifyListeners();
+
+    try {
+      final authService = AuthService();
+      await authService.signIn(email: _lawyer!.email, password: password);
+    } on ApiException {
+      _isFaceProcessing = false;
+      _faceMessage = 'FACE_DELETE_WRONG_PASSWORD';
+      notifyListeners();
+      return;
+    } catch (_) {
+      _isFaceProcessing = false;
+      _faceMessage = 'FACE_DELETE_WRONG_PASSWORD';
+      notifyListeners();
+      return;
+    }
+
+    final result = await _faceService.deleteFace(userEmail: _lawyer!.email);
+
+    _isFaceProcessing = false;
+    if (result.success) {
+      _faceRegistered = false;
+      _faceMessage = 'FACE_REMOVED';
+      _faceConfidence = null;
+    } else {
+      _faceMessage = result.message;
+    }
+    notifyListeners();
+  }
+
+  // ─── Electronic Signature ───────────────────────────────────────────
+
+  Future<void> saveSignature(Uint8List pngBytes) async {
+    if (_lawyer == null) return;
+    _isSignatureProcessing = true;
+    _signatureMessage = null;
+    notifyListeners();
+
+    try {
+      final url = await _signatureService.uploadSignature(
+        userId: _lawyer!.id,
+        signatureBytes: pngBytes,
+        isLawyer: true,
+      );
+      _signatureUrl = url;
+      _signatureMessage = 'SIGNATURE_SAVED';
+    } on ApiException catch (e) {
+      _signatureMessage = e.message;
+    } catch (e) {
+      _signatureMessage = e.toString();
+    } finally {
+      _isSignatureProcessing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteSignature() async {
+    if (_lawyer == null) return;
+    _isSignatureProcessing = true;
+    _signatureMessage = null;
+    notifyListeners();
+
+    try {
+      await _signatureService.deleteSignature(
+        userId: _lawyer!.id,
+        isLawyer: true,
+      );
+      _signatureUrl = null;
+      _signatureMessage = 'SIGNATURE_DELETED';
+    } on ApiException catch (e) {
+      _signatureMessage = e.message;
+    } catch (e) {
+      _signatureMessage = e.toString();
+    } finally {
+      _isSignatureProcessing = false;
+      notifyListeners();
+    }
   }
 
   @override

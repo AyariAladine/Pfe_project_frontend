@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../services/token_service.dart';
 import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../auth/login/login_view.dart';
 import '../home/main_shell.dart';
@@ -39,8 +40,11 @@ class _SplashViewState extends State<SplashView> {
     if (authVM.isAuthenticated) {
       // Check if biometrics are required
       if (!kIsWeb) {
+        final userId = await TokenService.getUserId();
         final prefs = await SharedPreferences.getInstance();
-        final biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
+        final biometricsEnabled = userId != null
+            ? (prefs.getBool('biometrics_enabled_$userId') ?? false)
+            : false;
         if (biometricsEnabled) {
           setState(() => _needsBiometric = true);
           await _authenticateWithBiometrics();

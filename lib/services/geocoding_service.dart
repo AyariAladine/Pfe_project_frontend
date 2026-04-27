@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import '../core/constants/api_constants.dart';
@@ -29,7 +30,7 @@ class GeocodingService {
       }
       return null;
     } catch (e) {
-      print('Geocoding error: $e');
+      debugPrint('Geocoding error: $e');
       return null;
     }
   }
@@ -51,7 +52,7 @@ class GeocodingService {
       }
       return null;
     } catch (e) {
-      print('Reverse geocoding error: $e');
+      debugPrint('Reverse geocoding error: $e');
       return null;
     }
   }
@@ -85,7 +86,7 @@ class GeocodingService {
         ),
       );
     } catch (e) {
-      print('Get current location error: $e');
+      debugPrint('Get current location error: $e');
       return null;
     }
   }

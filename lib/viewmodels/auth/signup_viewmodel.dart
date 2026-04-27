@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/user_model.dart' hide GoogleAuthResult;
+import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 
 class SignupViewModel extends ChangeNotifier {

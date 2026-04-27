@@ -286,6 +286,7 @@ class ApiService {
     required Uint8List fileBytes,
     required String fileName,
     String fieldName = 'file',
+    Map<String, String>? fields,
     bool requiresAuth = false,
   }) async {
     return uploadMultipleFiles(
@@ -293,6 +294,7 @@ class ApiService {
       allFileBytes: [fileBytes],
       allFileNames: [fileName],
       fieldName: fieldName,
+      fields: fields,
       requiresAuth: requiresAuth,
     );
   }
@@ -303,6 +305,7 @@ class ApiService {
     required List<Uint8List> allFileBytes,
     required List<String> allFileNames,
     String fieldName = 'file',
+    Map<String, String>? fields,
     bool requiresAuth = false,
   }) async {
     return _withTokenRetry(requiresAuth, () async {
@@ -317,6 +320,10 @@ class ApiService {
             throw ApiException(ErrorCodes.loginRequired);
           }
           request.headers['Authorization'] = 'Bearer $token';
+        }
+
+        if (fields != null && fields.isNotEmpty) {
+          request.fields.addAll(fields);
         }
         
         // Determine MIME type from file extension

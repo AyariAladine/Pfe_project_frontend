@@ -1,12 +1,15 @@
 /// API Constants for the NestJS backend
 class ApiConstants {
  
-  static const String baseUrl = 'http://10.122.213.118:3000';
+  static const String baseUrl = 'http://10.100.21.118:3000';
 
-  static const String chatbotBaseUrl = 'http://localhost:7001';
+  static const String chatbotBaseUrl = 'http://10.100.21.118:7001';
+
+  /// Face recognition API
+  static const String faceRecognitionBaseUrl = 'http://10.100.21.118:8000';
 
   /// Lawyer verification scraper service
-  static const String scraperBaseUrl = 'http://localhost:7002';
+  static const String scraperBaseUrl = 'http://10.100.21.118:7002';
   static const String verifyLawyerUrl = '$scraperBaseUrl/verify-lawyer';
   
   // Auth endpoints
@@ -26,14 +29,47 @@ class ApiConstants {
  
   static const String users = '/users';
   static String userProfile(String id) => '/users/$id/profile';
+  static String userSignature(String id) => '/users/$id/signature';
+  static String scanIdCard(String id) => '/users/$id/scan-id-card';
+  static String verification(String id) => '/users/$id/verification';
+  static String verificationFrontConfirm(String id) =>
+      '/users/$id/verification/front-confirm';
+  static String verificationBackConfirm(String id) =>
+      '/users/$id/verification/back-confirm';
+  static String verificationFinalize(String id) =>
+      '/users/$id/verification/finalize';
 
   // Lawyers endpoints
   static const String lawyers = '/lawyers';
   static String lawyerById(String id) => '/lawyers/$id';
   static String lawyerProfile(String id) => '/lawyers/$id/profile';
   static String lawyerVerify(String id) => '/lawyers/$id/verify';
+  static String lawyerSignature(String id) => '/lawyers/$id/signature';
 
   static const String properties = '/property';
+
+  // Application (postulation) endpoints
+  static const String applications = '/applications';
+  static const String myApplications = '/applications/my';
+  static const String incomingApplications = '/applications/incoming';
+  static String propertyApplications(String propertyId) =>
+      '/applications/property/$propertyId';
+  static String applicationById(String id) => '/applications/$id';
+  static String applicationStatus(String id) => '/applications/$id/status';
+  static String applicationCancel(String id) => '/applications/$id/cancel';
+  static String applicationMessages(String id) => '/applications/$id/messages';
+  static String applicationSetAmount(String id) => '/applications/$id/set-amount';
+  static String applicationAssignLawyer(String id) => '/applications/$id/assign-lawyer';
+
+  // Contract endpoints
+  static const String contracts = '/contracts';
+  static const String myContracts = '/contracts/my';
+  static const String lawyerContracts = '/contracts/lawyer';
+  static String contractById(String id) => '/contracts/$id';
+  static String contractByApplication(String applicationId) =>
+      '/contracts/application/$applicationId';
+  static String contractUpdateStatus(String id) => '/contracts/$id/status';
+  static String contractSign(String id) => '/contracts/$id/sign';
 
   static const String nominatimBaseUrl = 'https://nominatim.openstreetmap.org';
   

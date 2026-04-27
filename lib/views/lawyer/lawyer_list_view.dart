@@ -72,7 +72,7 @@ class _LawyerListContentState extends State<LawyerListContent> {
                 child: Row(
                   children: [
                     Text(
-                      '${vm.totalFilteredCount} ${l10n.translate('lawyersFound')}',
+                      '${vm.totalFilteredCount} ${l10n.lawyersFound}',
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark
@@ -116,7 +116,7 @@ class _LawyerListContentState extends State<LawyerListContent> {
           color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
         ),
         decoration: InputDecoration(
-          hintText: l10n.translate('searchLawyers'),
+          hintText: l10n.searchLawyers,
           hintStyle: TextStyle(
             color: isDark ? AppColors.textHintDark : AppColors.textHint,
           ),
@@ -433,7 +433,7 @@ class _LawyerListContentState extends State<LawyerListContent> {
                                   size: 12, color: AppColors.primary),
                               const SizedBox(width: 3),
                               Text(
-                                '${distance.toStringAsFixed(1)} ${l10n.translate('kmAway')}',
+                                '${distance.toStringAsFixed(1)} ${l10n.kmAway}',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -543,8 +543,8 @@ class _LawyerListContentState extends State<LawyerListContent> {
           const SizedBox(height: 24),
           Text(
             isSearching
-                ? l10n.translate('noLawyersMatchSearch')
-                : l10n.translate('noLawyersAvailable'),
+                ? l10n.noLawyersMatchSearch
+                : l10n.noLawyersAvailable,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -554,8 +554,8 @@ class _LawyerListContentState extends State<LawyerListContent> {
           const SizedBox(height: 8),
           Text(
             isSearching
-                ? l10n.translate('tryDifferentSearch')
-                : l10n.translate('noLawyersYet'),
+                ? l10n.tryDifferentSearch
+                : l10n.noLawyersYet,
             style: TextStyle(
               fontSize: 14,
               color:

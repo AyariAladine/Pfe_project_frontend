@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import 'core/localization/app_localizations.dart';
+import 'l10n/app_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'services/favorites_service.dart';
 import 'services/language_provider.dart';
@@ -42,23 +41,15 @@ class MyApp extends StatelessWidget {
             title: 'عقاري - Aqari',
             debugShowCheckedModeBanner: false,
             
-            // Theme - Light mode only
+            // Theme
             theme: AppTheme.lightTheme,
-            themeMode: ThemeMode.light,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
             
             // Localization
             locale: languageProvider.currentLocale,
-            supportedLocales: const [
-              Locale('ar'), // Arabic
-              Locale('en'), // English
-              Locale('fr'), // French
-            ],
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             
             // RTL Support
             builder: (context, child) {

@@ -61,7 +61,7 @@ class _PropertyMapViewState extends State<PropertyMapView> {
               options: MapOptions(
                 initialCenter: center,
                 initialZoom: 11,
-                onTap: (_, __) {
+                onTap: (_, _) {
                   setState(() => _selectedProperty = null);
                 },
               ),
@@ -166,7 +166,7 @@ class _PropertyMapViewState extends State<PropertyMapView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${properties.length} ${l10n.translate('propertiesOnMap')}',
+                      '${properties.length} ${l10n.propertiesOnMap}',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
