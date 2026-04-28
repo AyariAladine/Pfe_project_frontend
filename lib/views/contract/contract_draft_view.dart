@@ -92,6 +92,7 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
 
   @override
   void dispose() {
+    _vm.dispose();
     _contentController.dispose();
     _startDateController.dispose();
     _endDateController.dispose();

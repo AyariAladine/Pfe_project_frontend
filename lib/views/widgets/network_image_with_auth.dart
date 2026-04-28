@@ -60,6 +60,7 @@ class _NetworkImageWithAuthState extends State<NetworkImageWithAuth> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _hasError = false;

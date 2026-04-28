@@ -190,7 +190,7 @@ class ContractModel {
   String get tenantName => _personName(tenant);
   String get lawyerName => _personName(lawyer);
   String get propertyAddress =>
-      property?['propertyAddress'] as String? ?? '—';
+      property?['Propertyaddresse'] as String? ?? '—';
 
   bool get isEditable =>
       status == ContractStatus.draft ||

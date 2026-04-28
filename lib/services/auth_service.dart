@@ -192,7 +192,7 @@ class AuthService {
         // Try to refresh token
         final refreshed = await _apiService.refreshToken();
         if (refreshed) {
-          return getProfile();
+          return await getProfile();
         }
       }
       rethrow;

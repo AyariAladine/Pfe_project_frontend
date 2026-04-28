@@ -6,7 +6,6 @@ import 'l10n/app_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'services/favorites_service.dart';
 import 'services/language_provider.dart';
-import 'services/theme_provider.dart';
 import 'viewmodels/auth/auth_viewmodel.dart';
 import 'viewmodels/lawyer/lawyer_list_viewmodel.dart';
 import 'viewmodels/lawyer/lawyer_profile_viewmodel.dart';
@@ -28,29 +27,31 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => FavoritesService()..loadFavorites()),
+        ChangeNotifierProvider(create: (_) {
+          final service = FavoritesService();
+          service.loadFavorites().catchError((_) {});
+          return service;
+        }),
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
         ChangeNotifierProvider(create: (_) => LawyerListViewModel()),
         ChangeNotifierProvider(create: (_) => LawyerProfileViewModel()),
         ChangeNotifierProvider(create: (_) => UserProfileViewModel()),
       ],
-      child: Consumer2<LanguageProvider, ThemeProvider>(
-        builder: (context, languageProvider, themeProvider, _) {
+      child: Consumer<LanguageProvider>(
+        builder: (context, languageProvider, _) {
           return MaterialApp(
             title: 'عقاري - Aqari',
             debugShowCheckedModeBanner: false,
-            
-            // Theme
+
+            // Theme — light only
             theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeProvider.themeMode,
-            
+            themeMode: ThemeMode.light,
+
             // Localization
             locale: languageProvider.currentLocale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
-            
+
             // RTL Support
             builder: (context, child) {
               return Directionality(
@@ -60,7 +61,7 @@ class MyApp extends StatelessWidget {
                 child: child!,
               );
             },
-            
+
             // Home - Start with splash screen to check auth status
             home: const SplashView(),
           );
@@ -69,3 +70,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

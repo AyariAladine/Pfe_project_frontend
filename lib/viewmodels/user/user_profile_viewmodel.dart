@@ -200,7 +200,11 @@ class UserProfileViewModel extends ChangeNotifier {
     try {
       // Verify password via login endpoint
       final authService = AuthService();
-      await authService.signIn(email: _user!.email, password: password);
+      try {
+        await authService.signIn(email: _user!.email, password: password);
+      } finally {
+        authService.dispose();
+      }
     } on ApiException {
       _isFaceProcessing = false;
       _faceMessage = 'FACE_DELETE_WRONG_PASSWORD';

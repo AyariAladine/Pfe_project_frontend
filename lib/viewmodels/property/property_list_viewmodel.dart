@@ -61,9 +61,13 @@ class PropertyListViewModel extends ChangeNotifier {
 
   /// Full filtered + sorted available properties (internal)
   List<PropertyModel> get _filteredAvailableProperties {
-    var list = _allProperties
-        .where((p) => p.propertyStatus == PropertyStatus.available)
-        .toList();
+    // When no status filter is active, show only available properties by default.
+    // When a status filter is set, respect it and show all matching statuses.
+    var list = _filterStatus != null
+        ? _allProperties.toList()
+        : _allProperties
+            .where((p) => p.propertyStatus == PropertyStatus.available)
+            .toList();
 
     // Apply search
     if (_searchQuery.isNotEmpty) {

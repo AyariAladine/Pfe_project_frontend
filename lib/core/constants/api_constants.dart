@@ -1,7 +1,7 @@
 /// API Constants for the NestJS backend
 class ApiConstants {
  
-  static const String baseUrl = 'http://10.100.21.118:3000';
+  static const String baseUrl = 'http://10.143.72.118:3000';
 
   static const String chatbotBaseUrl = 'http://10.100.21.118:7001';
 

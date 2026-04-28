@@ -382,18 +382,34 @@ class ApiService {
   
   /// Handle HTTP response (returns Map)
   Map<String, dynamic> _handleResponse(http.Response response) {
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    
+    // Handle empty body (e.g. 204 No Content)
+    if (response.body.isEmpty) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {};
+      }
+      throw ApiException(ErrorCodes.unexpectedError, statusCode: response.statusCode);
+    }
+
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {};
+      }
+      throw ApiException(ErrorCodes.unexpectedError, statusCode: response.statusCode);
+    }
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
-    
+
     // Handle error responses - use error codes instead of hardcoded messages
     final message = body['message'];
-    final rawMessage = message is List 
+    final rawMessage = message is List
         ? message.first.toString()
         : message?.toString() ?? '';
-    
+
     switch (response.statusCode) {
       case 400:
         throw ApiException(rawMessage.isNotEmpty ? rawMessage : ErrorCodes.unexpectedError, statusCode: 400);
@@ -405,7 +421,7 @@ class ApiService {
         throw ApiException(ErrorCodes.notFound, statusCode: 404);
       case 409:
         // Check if it's an email conflict
-        if (rawMessage.toLowerCase().contains('email') || 
+        if (rawMessage.toLowerCase().contains('email') ||
             rawMessage.contains('مسجل') ||
             rawMessage.contains('exist')) {
           throw ApiException(ErrorCodes.emailExists, statusCode: 409);

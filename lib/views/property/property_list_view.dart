@@ -47,15 +47,15 @@ class _PropertyListViewContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          'My Properties',
-          style: TextStyle(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          l10n.myProperties,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -63,9 +63,9 @@ class _PropertyListViewContent extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.refresh,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              color: AppColors.textPrimary,
             ),
             onPressed: () {
               context.read<PropertyListViewModel>().refresh();

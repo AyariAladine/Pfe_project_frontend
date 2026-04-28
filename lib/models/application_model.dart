@@ -276,7 +276,7 @@ class ApplicationModel {
   // ─── Convenience getters for populated property data ───────────
 
   String get propertyAddress =>
-      property?['propertyAddress'] as String? ?? '—';
+      property?['Propertyaddresse'] as String? ?? '—';
 
   String? get propertyFirstImage {
     final images = property?['propertyImages'];

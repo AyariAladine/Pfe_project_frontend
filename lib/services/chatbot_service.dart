@@ -46,7 +46,7 @@ class ChatbotService {
       final body = <String, dynamic>{
         'question': question,
         'topK': topK,
-        'lawNum': ?lawNum,
+        if (lawNum != null) 'lawNum': lawNum,
       };
       debugPrint('[ChatbotService] Request body: ${jsonEncode(body)}');
       debugPrint('[ChatbotService] Request headers: {Content-Type: application/json}');
@@ -97,7 +97,7 @@ class ChatbotService {
       debugPrint('  Body: ${jsonEncode({
         'question': question,
         'topK': topK,
-        'lawNum': ?lawNum,
+        if (lawNum != null) 'lawNum': lawNum,
       })}');
       debugPrint('  Headers: {Content-Type: application/json}');
       debugPrint('  Environment: kIsWeb=$kIsWeb');

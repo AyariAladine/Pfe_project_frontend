@@ -408,8 +408,6 @@ class PropertyWizardViewModel extends ChangeNotifier {
     _useMapSelection = true;
     _error = null;
     _createdProperty = null;
-    _currentStepIndex = 0;
-    _currentStep = PropertyWizardStep.basicInfo;
     notifyListeners();
   }
 

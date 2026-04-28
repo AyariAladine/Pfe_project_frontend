@@ -93,14 +93,14 @@ class _MainShellState extends State<MainShell>
   void _navigateTo(NavItem item) {
     setState(() {
       _currentPage = item;
-      _selectedProperty = null; // Clear detail view when switching pages
-      _editingProperty = null; // Clear edit view when switching pages
-      _selectedLawyer = null;  // Clear lawyer detail when switching pages
-      _selectedApplicationId = null; // Clear application detail when switching pages
+      _selectedProperty = null;
+      _editingProperty = null;
+      _selectedLawyer = null;
+      _selectedApplicationId = null;
     });
-    // On narrow screens / mobile close the drawer; on wide web the sidebar stays open
+    // On narrow screens / mobile close the drawer only if it is actually open
     final isWideScreen = kIsWeb && MediaQuery.of(context).size.width >= 768;
-    if (!isWideScreen) {
+    if (!isWideScreen && Scaffold.maybeOf(context)?.isDrawerOpen == true) {
       Navigator.pop(context);
     }
   }

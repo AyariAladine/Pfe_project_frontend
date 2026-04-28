@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/ocr_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/otp_service.dart';
+import '../../services/token_service.dart';
 
 enum OnboardingStep {
   welcome,
@@ -165,8 +166,9 @@ class OnboardingViewModel extends ChangeNotifier {
   /// Save biometrics enabled state locally (scoped by user ID)
   Future<void> _saveBiometricsState(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
-    final user = await _authService.getProfile();
-    await prefs.setBool('biometrics_enabled_${user.id}', enabled);
+    final userId = await TokenService.getUserId();
+    if (userId == null) return;
+    await prefs.setBool('biometrics_enabled_$userId', enabled);
   }
 
   /// Load verification progress from backend so onboarding can resume.
