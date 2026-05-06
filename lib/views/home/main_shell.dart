@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
@@ -7,6 +7,7 @@ import '../../models/property_model.dart';
 import '../../models/user_model.dart';
 import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../widgets/language_selector.dart';
+import '../widgets/network_image_with_auth.dart';
 import '../auth/login/login_view.dart';
 import '../onboarding/onboarding_view.dart';
 import '../settings/settings_view.dart';
@@ -23,10 +24,12 @@ import '../lawyer/lawyer_profile_view.dart';
 import '../user/user_profile_view.dart';
 import '../contract/contracts_list_view.dart';
 import '../contract/lawyer_cases_view.dart';
+import '../contract/lawyer_work_view.dart';
+import '../rentals/active_rentals_view.dart';
+import '../../viewmodels/rentals/rentals_viewmodel.dart';
 import 'ai_assistant_view.dart';
 import 'home_content.dart';
 
-/// Navigation items enum
 enum NavItem {
   home,
   properties,
@@ -35,32 +38,33 @@ enum NavItem {
   incomingApplications,
   lawyers,
   profile,
+  work,
   contracts,
   cases,
+  activeRentals,
   aiAssistant,
   settings,
 }
 
-/// Main shell with persistent app bar and sidebar (web) / drawer (mobile)
 class MainShell extends StatefulWidget {
   final NavItem initialPage;
-
   const MainShell({super.key, this.initialPage = NavItem.home});
 
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell>
-    with SingleTickerProviderStateMixin {
+class _MainShellState extends State<MainShell> with SingleTickerProviderStateMixin {
   late NavItem _currentPage;
   late AnimationController _animController;
   late Animation<double> _slideAnimation;
-  int _propertyListRefreshKey = 0; // Key to force property list refresh
-  PropertyModel? _selectedProperty; // Currently selected property for detail view
-  PropertyModel? _editingProperty; // Currently editing property
-  UserModel? _selectedLawyer; // Currently selected lawyer for detail view
-  String? _selectedApplicationId; // Currently selected application for detail view
+  int _propertyListRefreshKey = 0;
+  PropertyModel? _selectedProperty;
+  PropertyModel? _editingProperty;
+  UserModel? _selectedLawyer;
+  String? _selectedApplicationId;
+
+  final ValueNotifier<int> _pendingApplicationCount = ValueNotifier(0);
 
   @override
   void initState() {
@@ -68,7 +72,7 @@ class _MainShellState extends State<MainShell>
     _currentPage = widget.initialPage;
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 280),
     );
     _slideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
@@ -78,6 +82,7 @@ class _MainShellState extends State<MainShell>
   @override
   void dispose() {
     _animController.dispose();
+    _pendingApplicationCount.dispose();
     super.dispose();
   }
 
@@ -98,7 +103,6 @@ class _MainShellState extends State<MainShell>
       _selectedLawyer = null;
       _selectedApplicationId = null;
     });
-    // On narrow screens / mobile close the drawer only if it is actually open
     final isWideScreen = kIsWeb && MediaQuery.of(context).size.width >= 768;
     if (!isWideScreen && Scaffold.maybeOf(context)?.isDrawerOpen == true) {
       Navigator.pop(context);
@@ -111,26 +115,24 @@ class _MainShellState extends State<MainShell>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isWideScreen = kIsWeb && MediaQuery.of(context).size.width >= 768;
 
-    if (isWideScreen) {
-      return _buildWebLayout(l10n, isDark);
-    } else {
-      return _buildMobileLayout(l10n, isDark);
-    }
+    return isWideScreen
+        ? _buildWebLayout(l10n, isDark)
+        : _buildMobileLayout(l10n, isDark);
   }
 
-  // ─── Web layout with sliding sidebar ───
+  // ─── Web layout ──────────────────────────────────────────────────────────
 
   Widget _buildWebLayout(AppLocalizations l10n, bool isDark) {
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       appBar: AppBar(
-        title: Text(_getTitle(l10n)),
+        title: _AppBarTitle(title: _getTitle(l10n)),
         centerTitle: true,
         leading: IconButton(
           icon: AnimatedIcon(
             icon: AnimatedIcons.menu_close,
             progress: _animController,
-            color: isDark ? AppColors.textPrimaryDark : const Color.fromARGB(255, 255, 255, 255),
+            color: Colors.white,
           ),
           onPressed: _toggleSidebar,
         ),
@@ -140,13 +142,11 @@ class _MainShellState extends State<MainShell>
         animation: _slideAnimation,
         builder: (context, child) {
           const sidebarWidth = 280.0;
-          final sidebarCurrentWidth = sidebarWidth * _slideAnimation.value;
           return Row(
             children: [
-              // Sidebar – clips to animated width
               ClipRect(
                 child: SizedBox(
-                  width: sidebarCurrentWidth,
+                  width: sidebarWidth * _slideAnimation.value,
                   child: OverflowBox(
                     alignment: AlignmentDirectional.centerStart,
                     minWidth: sidebarWidth,
@@ -155,7 +155,6 @@ class _MainShellState extends State<MainShell>
                   ),
                 ),
               ),
-              // Main content
               Expanded(child: _buildBody()),
             ],
           );
@@ -164,12 +163,12 @@ class _MainShellState extends State<MainShell>
     );
   }
 
-  // ─── Mobile layout with traditional drawer ───
+  // ─── Mobile layout ────────────────────────────────────────────────────────
 
   Widget _buildMobileLayout(AppLocalizations l10n, bool isDark) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getTitle(l10n)),
+        title: _AppBarTitle(title: _getTitle(l10n)),
         centerTitle: true,
         actions: [const LanguageSelector(), const SizedBox(width: 16)],
       ),
@@ -183,36 +182,30 @@ class _MainShellState extends State<MainShell>
       case NavItem.home:
         return l10n.appName;
       case NavItem.properties:
-        if (_editingProperty != null) {
-          return l10n.editProperty;
-        }
-        if (_selectedProperty != null) {
-          return l10n.propertyDetails;
-        }
+        if (_editingProperty != null) return l10n.editProperty;
+        if (_selectedProperty != null) return l10n.propertyDetails;
         return l10n.properties;
       case NavItem.addProperty:
         return l10n.addProperty;
       case NavItem.myApplications:
-        if (_selectedApplicationId != null) {
-          return l10n.applicationDetail;
-        }
+        if (_selectedApplicationId != null) return l10n.applicationDetail;
         return l10n.myApplications;
       case NavItem.incomingApplications:
-        if (_selectedApplicationId != null) {
-          return l10n.applicationDetail;
-        }
+        if (_selectedApplicationId != null) return l10n.applicationDetail;
         return l10n.incomingApplications;
       case NavItem.lawyers:
-        if (_selectedLawyer != null) {
-          return l10n.lawyerDetails;
-        }
+        if (_selectedLawyer != null) return l10n.lawyerDetails;
         return l10n.lawyers;
       case NavItem.profile:
         return l10n.myProfile;
+      case NavItem.work:
+        return l10n.work;
       case NavItem.contracts:
         return l10n.contracts;
       case NavItem.cases:
         return l10n.cases;
+      case NavItem.activeRentals:
+        return 'Active Rentals';
       case NavItem.aiAssistant:
         return l10n.aiAssistant;
       case NavItem.settings:
@@ -253,11 +246,7 @@ class _MainShellState extends State<MainShell>
         if (_editingProperty != null) {
           return EditPropertyContent(
             property: _editingProperty!,
-            onBack: () {
-              setState(() {
-                _editingProperty = null;
-              });
-            },
+            onBack: () => setState(() => _editingProperty = null),
             onPropertyUpdated: (updated) {
               setState(() {
                 _editingProperty = null;
@@ -277,34 +266,26 @@ class _MainShellState extends State<MainShell>
                 _propertyListRefreshKey++;
               });
             },
-            onPropertyDeleted: (id) {
+            onPropertyDeleted: (_) {
               setState(() {
                 _selectedProperty = null;
                 _propertyListRefreshKey++;
               });
             },
-            onEditProperty: (property) {
-              setState(() => _editingProperty = property);
-            },
+            onEditProperty: (property) => setState(() => _editingProperty = property),
           );
         }
-        // Use a key that changes to force rebuild and refresh data
         return PropertyListContent(
           key: ValueKey(_propertyListRefreshKey),
-          onPropertySelected: (property) {
-            setState(() => _selectedProperty = property);
-          },
-          onEditProperty: (property) {
-            setState(() => _editingProperty = property);
-          },
+          onPropertySelected: (property) => setState(() => _selectedProperty = property),
+          onEditProperty: (property) => setState(() => _editingProperty = property),
         );
       case NavItem.addProperty:
         return CreatePropertyWizardContent(
-          onPropertyCreated: (property) {
-            // Navigate back to properties list after creation and refresh
+          onPropertyCreated: (_) {
             setState(() {
               _currentPage = NavItem.properties;
-              _propertyListRefreshKey++; // Increment to force refresh
+              _propertyListRefreshKey++;
             });
           },
         );
@@ -316,16 +297,14 @@ class _MainShellState extends State<MainShell>
           );
         }
         return LawyerListContent(
-          onLawyerSelected: (lawyer) {
-            setState(() => _selectedLawyer = lawyer);
-          },
+          onLawyerSelected: (lawyer) => setState(() => _selectedLawyer = lawyer),
         );
       case NavItem.profile:
         final authVM = context.read<AuthViewModel>();
-        if (authVM.currentUser?.role == UserRole.lawyer) {
-          return const LawyerProfileContent();
-        }
+        if (authVM.currentUser?.role == UserRole.lawyer) return const LawyerProfileContent();
         return const UserProfileContent();
+      case NavItem.work:
+        return const LawyerWorkContent();
       case NavItem.contracts:
         final contractAuthVM = context.read<AuthViewModel>();
         return ContractsListContent(
@@ -333,6 +312,11 @@ class _MainShellState extends State<MainShell>
         );
       case NavItem.cases:
         return const LawyerCasesContent();
+      case NavItem.activeRentals:
+        return ChangeNotifierProvider(
+          create: (_) => RentalsViewModel(),
+          child: const ActiveRentalsContent(),
+        );
       case NavItem.myApplications:
         if (_selectedApplicationId != null) {
           return ApplicationDetailContent(
@@ -341,12 +325,8 @@ class _MainShellState extends State<MainShell>
           );
         }
         return MyApplicationsContent(
-          onViewProperty: (propertyId) {
-            setState(() => _currentPage = NavItem.properties);
-          },
-          onApplicationSelected: (applicationId) {
-            setState(() => _selectedApplicationId = applicationId);
-          },
+          onViewProperty: (_) => setState(() => _currentPage = NavItem.properties),
+          onApplicationSelected: (id) => setState(() => _selectedApplicationId = id),
         );
       case NavItem.incomingApplications:
         if (_selectedApplicationId != null) {
@@ -356,9 +336,8 @@ class _MainShellState extends State<MainShell>
           );
         }
         return IncomingApplicationsContent(
-          onApplicationSelected: (applicationId) {
-            setState(() => _selectedApplicationId = applicationId);
-          },
+          onApplicationSelected: (id) => setState(() => _selectedApplicationId = id),
+          onPendingCountChanged: (count) => _pendingApplicationCount.value = count,
         );
       case NavItem.aiAssistant:
         return const AiAssistantContent();
@@ -367,95 +346,51 @@ class _MainShellState extends State<MainShell>
     }
   }
 
+  // ─── Drawer (mobile) ──────────────────────────────────────────────────────
+
   Widget _buildDrawer(AppLocalizations l10n, bool isDark) {
     return Consumer<AuthViewModel>(
       builder: (context, authVM, _) {
+        final user = authVM.currentUser;
         return Drawer(
+          backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surface,
           child: Column(
             children: [
-              const SizedBox(height: 50),
-              _buildDrawerItem(
-                icon: Icons.home_rounded,
-                title: l10n.home,
-                item: NavItem.home,
-              ),
-              _buildDrawerItem(
-                icon: Icons.apartment_rounded,
-                title: l10n.properties,
-                item: NavItem.properties,
-              ),
-              _buildDrawerItem(
-                icon: Icons.send_rounded,
-                title: l10n.myApplications,
-                item: NavItem.myApplications,
-              ),
-              _buildDrawerItem(
-                icon: Icons.inbox_rounded,
-                title: l10n.incomingApplications,
-                item: NavItem.incomingApplications,
-              ),
-              _buildDrawerItem(
-                icon: Icons.gavel_rounded,
-                title: l10n.lawyers,
-                item: NavItem.lawyers,
-              ),
-              _buildDrawerItem(
-                icon: Icons.person_rounded,
-                title: l10n.myProfile,
-                item: NavItem.profile,
-              ),
-              _buildDrawerItem(
-                icon: Icons.description_rounded,
-                title: l10n.contracts,
-                item: NavItem.contracts,
-              ),
-              _buildDrawerItem(
-                icon: Icons.gavel_rounded,
-                title: l10n.cases,
-                item: NavItem.cases,
-              ),
-              _buildDrawerItem(
-                icon: Icons.smart_toy_rounded,
-                title: l10n.aiAssistant,
-                item: NavItem.aiAssistant,
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.verified_user_rounded),
-                title: Text(l10n.verifyIdentity),
-                subtitle: Text(
-                  l10n.verifyIdentitySubtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+              _buildUserHeader(user, l10n, isDark),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: [
+                    _buildDrawerItem(icon: Icons.home_rounded, title: l10n.home, item: NavItem.home),
+                    _buildDrawerItem(icon: Icons.apartment_rounded, title: l10n.properties, item: NavItem.properties),
+                    _buildDrawerItem(icon: Icons.send_rounded, title: l10n.myApplications, item: NavItem.myApplications),
+                    _buildDrawerItem(
+                      icon: Icons.inbox_rounded,
+                      title: l10n.incomingApplications,
+                      item: NavItem.incomingApplications,
+                      badge: _pendingApplicationCount,
+                    ),
+                    _buildDrawerItem(icon: Icons.balance_rounded, title: l10n.lawyers, item: NavItem.lawyers),
+                    _buildDrawerItem(icon: Icons.person_rounded, title: l10n.myProfile, item: NavItem.profile),
+                    _buildDrawerSectionLabel(l10n.work, isDark),
+                    _buildDrawerItem(icon: Icons.inbox_outlined, title: l10n.workRequests, item: NavItem.work),
+                    _buildDrawerItem(icon: Icons.description_rounded, title: l10n.contracts, item: NavItem.contracts),
+                    _buildDrawerItem(icon: Icons.home_work_rounded, title: 'Active Rentals', item: NavItem.activeRentals),
+                    _buildDrawerItem(icon: Icons.smart_toy_rounded, title: l10n.aiAssistant, item: NavItem.aiAssistant),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Divider(
+                        color: isDark ? AppColors.dividerDark : AppColors.divider,
+                      ),
+                    ),
+                    _buildDrawerOnboardingItem(l10n, context),
+                    _buildDrawerItem(icon: Icons.settings_rounded, title: l10n.settings, item: NavItem.settings),
+                  ],
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const OnboardingView()),
-                  );
-                },
               ),
-              _buildDrawerItem(
-                icon: Icons.settings_rounded,
-                title: l10n.settings,
-                item: NavItem.settings,
-              ),
-              const Spacer(),
-              ListTile(
-                leading: const Icon(
-                  Icons.logout_rounded,
-                  color: AppColors.error,
-                ),
-                title: Text(
-                  l10n.logout,
-                  style: const TextStyle(color: AppColors.error),
-                ),
-                onTap: () => _confirmLogout(context, authVM, l10n),
-              ),
-              const SizedBox(height: 20),
+              _buildLogoutButton(context, authVM, l10n, isDark),
+              const SizedBox(height: 16),
             ],
           ),
         );
@@ -463,11 +398,472 @@ class _MainShellState extends State<MainShell>
     );
   }
 
+  Widget _buildDrawerOnboardingItem(AppLocalizations l10n, BuildContext ctx) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: ListTile(
+        leading: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.success.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.verified_user_rounded, size: 18, color: AppColors.success),
+        ),
+        title: Text(l10n.verifyIdentity,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        subtitle: Text(
+          l10n.verifyIdentitySubtitle,
+          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        onTap: () {
+          Navigator.pop(ctx);
+          Navigator.push(ctx, MaterialPageRoute(builder: (_) => const OnboardingView()));
+        },
+      ),
+    );
+  }
+
+  // ─── Sidebar (web) ────────────────────────────────────────────────────────
+
+  Widget _buildSidebar(AppLocalizations l10n, bool isDark) {
+    return Consumer<AuthViewModel>(
+      builder: (context, authVM, _) {
+        final user = authVM.currentUser;
+        return Material(
+          elevation: 0,
+          color: isDark ? AppColors.surfaceDark : AppColors.surface,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(
+                  color: isDark ? AppColors.dividerDark : AppColors.divider,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildUserHeader(user, l10n, isDark),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    children: [
+                      _buildSidebarItem(icon: Icons.home_rounded, title: l10n.home, item: NavItem.home, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.apartment_rounded, title: l10n.properties, item: NavItem.properties, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.send_rounded, title: l10n.myApplications, item: NavItem.myApplications, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.inbox_rounded, title: l10n.incomingApplications, item: NavItem.incomingApplications, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.balance_rounded, title: l10n.lawyers, item: NavItem.lawyers, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.person_rounded, title: l10n.myProfile, item: NavItem.profile, isDark: isDark),
+                      _buildSidebarSectionLabel(l10n.work, isDark),
+                      _buildSidebarItem(icon: Icons.inbox_outlined, title: l10n.workRequests, item: NavItem.work, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.description_rounded, title: l10n.contracts, item: NavItem.contracts, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.home_work_rounded, title: 'Active Rentals', item: NavItem.activeRentals, isDark: isDark),
+                      _buildSidebarItem(icon: Icons.smart_toy_rounded, title: l10n.aiAssistant, item: NavItem.aiAssistant, isDark: isDark),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Divider(
+                          color: isDark ? AppColors.dividerDark : AppColors.divider,
+                        ),
+                      ),
+                      _buildSidebarItem(
+                        icon: Icons.verified_user_rounded,
+                        title: l10n.verifyIdentity,
+                        item: null,
+                        isDark: isDark,
+                        iconColor: AppColors.success,
+                        onTap: () {
+                          _animController.reverse();
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const OnboardingView()));
+                        },
+                      ),
+                      _buildSidebarItem(icon: Icons.settings_rounded, title: l10n.settings, item: NavItem.settings, isDark: isDark),
+                    ],
+                  ),
+                ),
+                _buildLogoutButton(context, authVM, l10n, isDark),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── Shared: User header ──────────────────────────────────────────────────
+
+  Widget _buildUserHeader(UserModel? user, AppLocalizations l10n, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 20,
+        left: 20,
+        right: 20,
+        bottom: 20,
+      ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primaryDark, AppColors.primary, Color(0xFF264D7A)],
+          stops: [0.0, 0.6, 1.0],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Avatar with gold ring
+              Container(
+                width: 56,
+                height: 56,
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [AppColors.gold, AppColors.goldDark],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: user?.profileImageUrl != null
+                      ? NetworkImageWithAuth(
+                          imageUrl: user!.profileImageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: () => _avatarFallback(),
+                        )
+                      : _avatarFallback(),
+                ),
+              ),
+              // Verified badge
+              if (user?.isVerified == true)
+                Positioned(
+                  bottom: -1,
+                  right: -1,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const Icon(Icons.check_rounded, size: 10, color: Colors.white),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            user?.fullName ?? l10n.welcomeBack,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            user?.email ?? '',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (user != null) _buildRoleBadge(user.role),
+        ],
+      ),
+    );
+  }
+
+  Widget _avatarFallback() {
+    return Container(
+      color: AppColors.primaryLight,
+      child: const Icon(Icons.person, size: 30, color: Colors.white),
+    );
+  }
+
+  Widget _buildRoleBadge(UserRole role) {
+    final Color color;
+    final String label;
+    final IconData icon;
+
+    switch (role) {
+      case UserRole.lawyer:
+        color = AppColors.gold;
+        label = 'Lawyer';
+        icon = Icons.balance_rounded;
+        break;
+      default:
+        color = AppColors.secondary;
+        label = 'User';
+        icon = Icons.person_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Sidebar nav item (web) ───────────────────────────────────────────────
+
+  Widget _buildSidebarItem({
+    required IconData icon,
+    required String title,
+    required NavItem? item,
+    required bool isDark,
+    Color? iconColor,
+    VoidCallback? onTap,
+  }) {
+    final isSelected = item != null && _currentPage == item;
+    final selectedColor = isDark ? AppColors.primaryLight : AppColors.primary;
+    final defaultIconColor = iconColor ??
+        (isDark ? AppColors.textSecondaryDark : AppColors.textSecondary);
+    final effectiveIconColor = isSelected ? selectedColor : defaultIconColor;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap ?? (item != null ? () => _navigateTo(item) : null),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? selectedColor.withValues(alpha: 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border(
+              left: BorderSide(
+                color: isSelected ? selectedColor : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: effectiveIconColor),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? selectedColor
+                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarSectionLabel(String label, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 16, 4),
+      child: Row(
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
+              color: isDark ? AppColors.textHintDark : AppColors.textHint,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              height: 1,
+              color: (isDark ? AppColors.dividerDark : AppColors.divider),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Drawer nav item (mobile) ─────────────────────────────────────────────
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required NavItem item,
+    ValueListenable<int>? badge,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = _currentPage == item;
+    final selectedColor = isDark ? AppColors.primaryLight : AppColors.primary;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _navigateTo(item),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? selectedColor.withValues(alpha: 0.08) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border(
+              left: BorderSide(
+                color: isSelected ? selectedColor : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              badge != null
+                  ? ValueListenableBuilder<int>(
+                      valueListenable: badge,
+                      builder: (_, count, _) => _PulsingBadge(
+                        count: count,
+                        child: Icon(icon, size: 20,
+                            color: isSelected ? selectedColor
+                                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondary)),
+                      ),
+                    )
+                  : Icon(icon, size: 20,
+                      color: isSelected ? selectedColor
+                          : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondary)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? selectedColor
+                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerSectionLabel(String label, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 16, 4),
+      child: Row(
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
+              color: isDark ? AppColors.textHintDark : AppColors.textHint,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              height: 1,
+              color: isDark ? AppColors.dividerDark : AppColors.divider,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Shared: Logout button ────────────────────────────────────────────────
+
+  Widget _buildLogoutButton(
+      BuildContext ctx, AuthViewModel authVM, AppLocalizations l10n, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _confirmLogout(ctx, authVM, l10n),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            color: AppColors.error.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.error.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+              const SizedBox(width: 12),
+              Text(
+                l10n.logout,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _confirmLogout(BuildContext context, AuthViewModel authVM, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
@@ -508,210 +904,99 @@ class _MainShellState extends State<MainShell>
       ),
     );
   }
+}
 
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required NavItem item,
-  }) {
-    final isSelected = _currentPage == item;
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      selected: isSelected,
-      onTap: () => _navigateTo(item),
-    );
-  }
+// ─── App bar title with subtle brand mark ────────────────────────────────────
 
-  // ─── Web sidebar ───
+class _AppBarTitle extends StatelessWidget {
+  final String title;
+  const _AppBarTitle({required this.title});
 
-  Widget _buildSidebar(AppLocalizations l10n, bool isDark) {
-    return Consumer<AuthViewModel>(
-      builder: (context, authVM, _) {
-        return Material(
-          elevation: 8,
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-
-              // Nav items
-              _buildSidebarItem(
-                icon: Icons.home_rounded,
-                title: l10n.home,
-                item: NavItem.home,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.apartment_rounded,
-                title: l10n.properties,
-                item: NavItem.properties,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.send_rounded,
-                title: l10n.myApplications,
-                item: NavItem.myApplications,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.inbox_rounded,
-                title: l10n.incomingApplications,
-                item: NavItem.incomingApplications,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.gavel_rounded,
-                title: l10n.lawyers,
-                item: NavItem.lawyers,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.person_rounded,
-                title: l10n.myProfile,
-                item: NavItem.profile,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.description_rounded,
-                title: l10n.contracts,
-                item: NavItem.contracts,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.gavel_rounded,
-                title: l10n.cases,
-                item: NavItem.cases,
-                isDark: isDark,
-              ),
-              _buildSidebarItem(
-                icon: Icons.smart_toy_rounded,
-                title: l10n.aiAssistant,
-                item: NavItem.aiAssistant,
-                isDark: isDark,
-              ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Divider(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.black.withValues(alpha: 0.08),
-                ),
-              ),
-
-              _buildSidebarItem(
-                icon: Icons.verified_user_rounded,
-                title: l10n.verifyIdentity,
-                item: null,
-                isDark: isDark,
-                onTap: () {
-                  _animController.reverse();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const OnboardingView()),
-                  );
-                },
-              ),
-              _buildSidebarItem(
-                icon: Icons.settings_rounded,
-                title: l10n.settings,
-                item: NavItem.settings,
-                isDark: isDark,
-              ),
-
-              const Spacer(),
-
-              // Logout
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => _confirmLogout(context, authVM, l10n),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.logout_rounded,
-                            color: AppColors.error, size: 22),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.logout,
-                          style: const TextStyle(
-                            color: AppColors.error,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSidebarItem({
-    required IconData icon,
-    required String title,
-    required NavItem? item,
-    required bool isDark,
-    VoidCallback? onTap,
-  }) {
-    final isSelected = item != null && _currentPage == item;
-    final selectedColor = isDark ? AppColors.primaryLight : AppColors.primary;
-    final defaultColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap ?? (item != null ? () => _navigateTo(item) : null),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(
-            color: isSelected
-                ? selectedColor.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            gradient: const LinearGradient(
+              colors: [AppColors.gold, AppColors.goldDark],
+            ),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 22,
-                color: isSelected ? selectedColor : defaultColor,
-              ),
-              const SizedBox(width: 14),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? selectedColor
-                      : (isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary),
-                ),
-              ),
-            ],
+          child: const Icon(Icons.balance_rounded, size: 15, color: Colors.white),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            letterSpacing: 0.3,
           ),
         ),
+      ],
+    );
+  }
+}
+
+// ─── Pulsing notification badge ───────────────────────────────────────────────
+
+class _PulsingBadge extends StatefulWidget {
+  final int count;
+  final Widget child;
+  const _PulsingBadge({required this.count, required this.child});
+
+  @override
+  State<_PulsingBadge> createState() => _PulsingBadgeState();
+}
+
+class _PulsingBadgeState extends State<_PulsingBadge> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _scale = Tween<double>(begin: 0.88, end: 1.12).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+    if (widget.count > 0) _ctrl.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_PulsingBadge old) {
+    super.didUpdateWidget(old);
+    if (widget.count > 0 && !_ctrl.isAnimating) {
+      _ctrl.repeat(reverse: true);
+    } else if (widget.count == 0 && _ctrl.isAnimating) {
+      _ctrl.stop();
+      _ctrl.animateTo(0.0, duration: const Duration(milliseconds: 200));
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.count == 0) return widget.child;
+    return AnimatedBuilder(
+      animation: _scale,
+      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+      child: Badge(
+        isLabelVisible: true,
+        label: Text('${widget.count}'),
+        backgroundColor: AppColors.error,
+        child: widget.child,
       ),
     );
   }

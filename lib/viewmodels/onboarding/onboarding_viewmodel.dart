@@ -11,8 +11,9 @@ import '../../services/token_service.dart';
 
 enum OnboardingStep {
   welcome,
+  cinFrontScan,
+  cinBackScan,
   phoneVerification,
-  cinScan,
   biometrics,
   complete,
 }
@@ -52,6 +53,25 @@ class OnboardingViewModel extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final OtpService _otpService = OtpService();
 
+  // ── field schema constants ──────────────────────────────────────────────────
+
+  /// Backend/debug keys that are never meaningful to display or submit.
+  static const _metaKeys = {
+    'missingFields', 'confidenceHints', 'rawText', 'source', 'ocrConfidence',
+  };
+
+  /// Canonical field order for the front-side card.
+  static const _frontSchema = [
+    'identityNumber', 'lastName', 'firstName', 'fullName',
+    'dateOfBirth', 'placeOfBirth', 'lineage',
+  ];
+
+  /// Canonical field order for the back-side card.
+  static const _backSchema = [
+    'address',
+    'issueDate',
+  ];
+
   // Getters
   OnboardingStep get currentStep => _currentStep;
   bool get isLoading => _isLoading;
@@ -61,12 +81,42 @@ class OnboardingViewModel extends ChangeNotifier {
   bool get cinVerified => _cinVerified;
   Map<String, dynamic>? get frontIdCardData => _frontIdCardData;
   Map<String, dynamic>? get backIdCardData => _backIdCardData;
-    Map<String, dynamic> get frontExtractedFields =>
-      _extractFieldsForSide(_frontIdCardData);
-    Map<String, dynamic> get backExtractedFields =>
-      _extractFieldsForSide(_backIdCardData);
+
+  /// Clean extracted fields restricted to the canonical schema, with no meta/
+  /// garbage keys and no empty values. Used when submitting data to the API.
+  Map<String, dynamic> get frontExtractedFields =>
+      _extractSchemaFields(_frontIdCardData, _frontSchema);
+  Map<String, dynamic> get backExtractedFields =>
+      _extractSchemaFields(_backIdCardData, _backSchema);
+
+  /// All schema fields, pre-populated with extracted values (empty string if
+  /// not yet extracted). Used to drive the editable review cards so the user
+  /// always sees every expected field and can fill in what OCR missed.
+  Map<String, dynamic> get frontDisplayFields =>
+      _buildDisplayFields(_frontIdCardData, _frontSchema);
+  Map<String, dynamic> get backDisplayFields =>
+      _buildDisplayFields(_backIdCardData, _backSchema);
   bool get hasFrontIdCard => _frontIdCardData != null;
   bool get hasBackIdCard => _backIdCardData != null;
+
+  /// Per-field OCR confidences (0.0–1.0) from the Gemini backend.
+  Map<String, double> get frontFieldConfidences =>
+      _confidencesFrom(_frontIdCardData);
+  Map<String, double> get backFieldConfidences =>
+      _confidencesFrom(_backIdCardData);
+
+  /// Fields where model confidence < 0.55 — shown with a warning icon in the
+  /// review form so the user knows to double-check before confirming.
+  Set<String> get lowConfidenceFrontFields =>
+      _lowConfidenceKeys(frontFieldConfidences);
+  Set<String> get lowConfidenceBackFields =>
+      _lowConfidenceKeys(backFieldConfidences);
+
+  /// True when the backend flagged the front scan as needing manual review.
+  bool get frontRequiresManualReview =>
+      _frontIdCardData?['requiresManualReview'] == true;
+  bool get backRequiresManualReview =>
+      _backIdCardData?['requiresManualReview'] == true;
     bool get frontInfoConfirmed => _frontInfoConfirmed;
     bool get backInfoConfirmed => _backInfoConfirmed;
     bool get finalIdVerificationConfirmed => _finalIdVerificationConfirmed;
@@ -92,7 +142,7 @@ class OnboardingViewModel extends ChangeNotifier {
   bool get phoneVerified => _phoneVerified;
   bool get otpSent => _otpSent;
   bool get allComplete =>
-      _phoneVerified && hasCompleteIdCardData && (_biometricsEnabled || kIsWeb);
+      _phoneVerified && _cinVerified && (_biometricsEnabled || kIsWeb);
 
   OnboardingViewModel() {
     _initialize();
@@ -121,23 +171,17 @@ class OnboardingViewModel extends ChangeNotifier {
       // Phone is verified if the backend profile has a non-empty phone number
       // (the OTP verify endpoint already persists this server-side).
       _phoneVerified = user.phoneNumber.isNotEmpty;
-      debugPrint('Phone verified: $_phoneVerified');
-      
-      // Check if CIN is already verified (not empty and not placeholder)
-      if (user.identityNumber.isNotEmpty && 
+
+      // Pre-fill CIN number from profile if it looks valid, but do NOT mark
+      // as verified yet — the verification document is the source of truth.
+      if (user.identityNumber.isNotEmpty &&
           user.identityNumber != '00000000' &&
           user.identityNumber.length == 8) {
         _cinNumber = user.identityNumber;
-        _existingCinFromProfile = true;
-        _frontInfoConfirmed = true;
-        _backInfoConfirmed = true;
-        _finalIdVerificationConfirmed = true;
-        debugPrint('CIN verified: $_cinNumber');
-      } else {
-        debugPrint('CIN not verified - empty or placeholder');
-        // Try to resume from backend verification state
-        await _loadVerificationProgress(userId);
       }
+
+      // Always check the verification document regardless of profile CIN state.
+      await _loadVerificationProgress(userId);
 
       _updateCinVerificationState();
       
@@ -172,18 +216,27 @@ class OnboardingViewModel extends ChangeNotifier {
   }
 
   /// Load verification progress from backend so onboarding can resume.
+  /// If the document is missing or not started, resets all CIN state so the
+  /// user is taken back through the full CIN scan flow.
   Future<void> _loadVerificationProgress(String userId) async {
     try {
       final data = await _apiService.get(
         ApiConstants.verification(userId),
         requiresAuth: true,
       );
-      if (data is! Map<String, dynamic>) return;
+      if (data is! Map<String, dynamic>) {
+        _resetCinState();
+        return;
+      }
 
       final status = data['status']?.toString() ?? 'not_started';
-      debugPrint('Backend verification status: $status');
 
-      // Restore CIN if present
+      if (status == 'not_started') {
+        _resetCinState();
+        return;
+      }
+
+      // Restore CIN number from document (overrides profile value if present)
       final cin = data['identityNumber']?.toString();
       if (cin != null && cin.length == 8 && RegExp(r'^\d{8}$').hasMatch(cin)) {
         _cinNumber = cin;
@@ -211,17 +264,28 @@ class OnboardingViewModel extends ChangeNotifier {
 
       _finalIdVerificationConfirmed = data['finalConfirmed'] == true;
 
-      // Backend may also track phone verification
       if (data['phoneVerified'] == true) {
         _phoneVerified = true;
       }
 
+      // Only mark as fully verified if the document says so
       if (status == 'verified') {
         _existingCinFromProfile = true;
       }
     } catch (e) {
-      debugPrint('Could not load verification progress: $e');
+      // 404 = document was deleted — treat as not started
+      _resetCinState();
     }
+  }
+
+  void _resetCinState() {
+    _existingCinFromProfile = false;
+    _frontInfoConfirmed = false;
+    _backInfoConfirmed = false;
+    _finalIdVerificationConfirmed = false;
+    _frontIdCardData = null;
+    _backIdCardData = null;
+    _cinVerified = false;
   }
 
   void nextStep() {
@@ -233,8 +297,9 @@ class OnboardingViewModel extends ChangeNotifier {
   /// If all are done, go to complete.
   OnboardingStep _nextIncompleteStep(OnboardingStep from) {
     final order = [
+      OnboardingStep.cinFrontScan,
+      OnboardingStep.cinBackScan,
       OnboardingStep.phoneVerification,
-      OnboardingStep.cinScan,
       OnboardingStep.biometrics,
       OnboardingStep.complete,
     ];
@@ -254,10 +319,12 @@ class OnboardingViewModel extends ChangeNotifier {
     switch (step) {
       case OnboardingStep.welcome:
         return true; // welcome is always "done" once seen
+      case OnboardingStep.cinFrontScan:
+        return _existingCinFromProfile || _frontInfoConfirmed;
+      case OnboardingStep.cinBackScan:
+        return _cinVerified;
       case OnboardingStep.phoneVerification:
         return _phoneVerified;
-      case OnboardingStep.cinScan:
-        return _cinVerified;
       case OnboardingStep.biometrics:
         return _biometricsEnabled || kIsWeb;
       case OnboardingStep.complete:
@@ -269,14 +336,17 @@ class OnboardingViewModel extends ChangeNotifier {
     switch (_currentStep) {
       case OnboardingStep.welcome:
         break;
-      case OnboardingStep.phoneVerification:
+      case OnboardingStep.cinFrontScan:
         _currentStep = OnboardingStep.welcome;
         break;
-      case OnboardingStep.cinScan:
-        _currentStep = OnboardingStep.phoneVerification;
+      case OnboardingStep.cinBackScan:
+        _currentStep = OnboardingStep.cinFrontScan;
+        break;
+      case OnboardingStep.phoneVerification:
+        _currentStep = OnboardingStep.cinBackScan;
         break;
       case OnboardingStep.biometrics:
-        _currentStep = OnboardingStep.cinScan;
+        _currentStep = OnboardingStep.phoneVerification;
         break;
       case OnboardingStep.complete:
         _currentStep = OnboardingStep.biometrics;
@@ -456,6 +526,8 @@ class OnboardingViewModel extends ChangeNotifier {
 
       if (scanData == null) {
         _error = 'Could not read text from image. Please try again.';
+      } else if (scanData['error'] != null) {
+        _error = scanData['error'].toString();
       } else {
         if (side == 'front') {
           _frontIdCardData = scanData;
@@ -520,12 +592,16 @@ class OnboardingViewModel extends ChangeNotifier {
       notifyListeners();
 
       final user = await _authService.getProfile();
+      final frontPayload = {
+        ...frontExtractedFields,
+        if (_cinNumber != null) 'identityNumber': _cinNumber,
+      };
+      debugPrint('=== FRONT CONFIRM PAYLOAD ===');
+      frontPayload.forEach((k, v) => debugPrint('  $k: $v'));
+      debugPrint('=============================');
       await _apiService.patch(
         ApiConstants.verificationFrontConfirm(user.id),
-        body: {
-          'extractedFields': frontExtractedFields,
-          'identityNumber': _cinNumber,
-        },
+        body: frontPayload,
         requiresAuth: true,
       );
 
@@ -553,11 +629,12 @@ class OnboardingViewModel extends ChangeNotifier {
       notifyListeners();
 
       final user = await _authService.getProfile();
+      debugPrint('=== BACK CONFIRM PAYLOAD ===');
+      backExtractedFields.forEach((k, v) => debugPrint('  $k: $v'));
+      debugPrint('============================');
       await _apiService.patch(
         ApiConstants.verificationBackConfirm(user.id),
-        body: {
-          'extractedFields': backExtractedFields,
-        },
+        body: backExtractedFields,
         requiresAuth: true,
       );
 
@@ -601,7 +678,6 @@ class OnboardingViewModel extends ChangeNotifier {
         ApiConstants.verificationFinalize(user.id),
         body: {
           'identityNumber': _cinNumber,
-          'combinedFields': _buildCombinedIdCardFields(),
         },
         requiresAuth: true,
       );
@@ -615,6 +691,44 @@ class OnboardingViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Correct a single extracted field on the front side.
+  /// Resets the front-confirmed flag so the user must re-confirm.
+  void updateFrontExtractedField(String key, String value) {
+    if (_frontIdCardData == null) return;
+    final fields = Map<String, dynamic>.from(
+      (_frontIdCardData!['extractedFields'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
+    if (value.trim().isEmpty) {
+      fields.remove(key);
+    } else {
+      fields[key] = value.trim();
+    }
+    _frontIdCardData = {..._frontIdCardData!, 'extractedFields': fields};
+    _frontInfoConfirmed = false;
+    _finalIdVerificationConfirmed = false;
+    if (key == 'identityNumber') _refreshCombinedCin();
+    _updateCinVerificationState();
+    notifyListeners();
+  }
+
+  /// Correct a single extracted field on the back side.
+  void updateBackExtractedField(String key, String value) {
+    if (_backIdCardData == null) return;
+    final fields = Map<String, dynamic>.from(
+      (_backIdCardData!['extractedFields'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
+    if (value.trim().isEmpty) {
+      fields.remove(key);
+    } else {
+      fields[key] = value.trim();
+    }
+    _backIdCardData = {..._backIdCardData!, 'extractedFields': fields};
+    _backInfoConfirmed = false;
+    _finalIdVerificationConfirmed = false;
+    _updateCinVerificationState();
+    notifyListeners();
   }
 
   void clearFrontIdCard() {
@@ -730,17 +844,65 @@ class OnboardingViewModel extends ChangeNotifier {
     return combined;
   }
 
-  Map<String, dynamic> _extractFieldsForSide(Map<String, dynamic>? sideData) {
+  /// Like _extractCleanFields but further restricts keys to the given schema.
+  /// Prevents extra OCR fields (e.g. barcodeNumber) from reaching the backend.
+  Map<String, dynamic> _extractSchemaFields(
+    Map<String, dynamic>? sideData,
+    List<String> schema,
+  ) {
+    final clean = _extractCleanFields(sideData);
+    return Map.fromEntries(
+      clean.entries.where((e) => schema.contains(e.key)),
+    );
+  }
+
+  /// Clean extracted fields: removes meta/debug keys and empty values only.
+  /// Arabic characters are intentionally kept — they are valid CIN data.
+  Map<String, dynamic> _extractCleanFields(Map<String, dynamic>? sideData) {
     if (sideData == null) return const {};
     final fields = sideData['extractedFields'];
-    if (fields is Map<String, dynamic>) {
-      return Map<String, dynamic>.from(fields);
-    }
-    if (fields is Map) {
-      return Map<String, dynamic>.from(fields);
-    }
-    return const {};
+    if (fields is! Map) return const {};
+    return Map.fromEntries(
+      fields.entries.where((e) {
+        final key = e.key.toString();
+        final value = e.value?.toString() ?? '';
+        return !_metaKeys.contains(key) && value.trim().isNotEmpty;
+      }).map((e) => MapEntry(e.key.toString(), e.value)),
+    );
   }
+
+  /// All schema fields in canonical order, pre-populated with clean extracted
+  /// values (empty string when not yet extracted). Drives the editable cards.
+  Map<String, dynamic> _buildDisplayFields(
+    Map<String, dynamic>? sideData,
+    List<String> schema,
+  ) {
+    final result = Map<String, dynamic>.fromEntries(
+      schema.map((k) => MapEntry(k, '')),
+    );
+    if (sideData == null) return result;
+    final clean = _extractCleanFields(sideData);
+    for (final key in schema) {
+      if (clean.containsKey(key)) result[key] = clean[key];
+    }
+    return result;
+  }
+
+  Map<String, double> _confidencesFrom(Map<String, dynamic>? sideData) {
+    final raw = sideData?['fieldConfidences'];
+    if (raw is! Map) return {};
+    return Map.fromEntries(
+      raw.entries.map(
+        (e) => MapEntry(e.key.toString(), (e.value as num?)?.toDouble() ?? 0.0),
+      ),
+    );
+  }
+
+  Set<String> _lowConfidenceKeys(Map<String, double> confidences) =>
+      confidences.entries
+          .where((e) => e.value < 0.55)
+          .map((e) => e.key)
+          .toSet();
 
   void _updateCinVerificationState() {
     final hasValidCin = _cinNumber != null &&

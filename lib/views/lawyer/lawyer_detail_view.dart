@@ -611,10 +611,11 @@ class _LawyerDetailContentState extends State<LawyerDetailContent> {
     try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (_) {
-      // Fallback: try without specifying mode
       try {
         await launchUrl(url);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[LawyerDetail] launchUrl failed: $e');
+      }
     }
   }
 

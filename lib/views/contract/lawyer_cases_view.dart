@@ -7,6 +7,7 @@ import '../../models/contract_model.dart';
 import '../../services/application_service.dart';
 import '../../services/token_service.dart';
 import '../contract/contract_draft_view.dart';
+import '../contract/contract_type_selection_view.dart';
 
 /// Shows applications assigned to the current lawyer for contract drafting.
 /// This replaces the "Cases" placeholder in the navigation.
@@ -26,6 +27,8 @@ class _LawyerCasesContentState extends State<LawyerCasesContent> {
 
   // Navigation state
   ApplicationModel? _selectedCase;
+  ContractType? _selectedContractType;
+  bool _showingTypeSelection = false;
   bool _showingContract = false;
 
   @override
@@ -64,18 +67,29 @@ class _LawyerCasesContentState extends State<LawyerCasesContent> {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Show contract draft view if selected
-    if (_showingContract && _selectedCase != null) {
-      final contractType =
-          _selectedCase!.type == ApplicationType.rent
-              ? ContractType.rental
-              : ContractType.sale;
+    // Show contract draft view once a type has been selected
+    if (_showingContract && _selectedCase != null && _selectedContractType != null) {
       return ContractDraftContent(
         application: _selectedCase!,
-        contractType: contractType,
+        contractType: _selectedContractType!,
         onBack: () => setState(() {
           _showingContract = false;
+        }),
+      );
+    }
+
+    // Show contract type selection grid
+    if (_showingTypeSelection && _selectedCase != null) {
+      return ContractTypeSelectionContent(
+        application: _selectedCase!,
+        onBack: () => setState(() {
+          _showingTypeSelection = false;
           _selectedCase = null;
+        }),
+        onTypeSelected: (type) => setState(() {
+          _selectedContractType = type;
+          _showingTypeSelection = false;
+          _showingContract = true;
         }),
       );
     }
@@ -260,7 +274,7 @@ class _LawyerCasesContentState extends State<LawyerCasesContent> {
                 child: ElevatedButton.icon(
                   onPressed: () => setState(() {
                     _selectedCase = app;
-                    _showingContract = true;
+                    _showingTypeSelection = true;
                   }),
                   icon: const Icon(Icons.description_rounded, size: 18),
                   label: Text(l10n.draftContract),

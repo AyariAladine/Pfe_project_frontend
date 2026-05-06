@@ -195,10 +195,56 @@ class _PropertyListBodyState extends State<_PropertyListBody> {
                   return _buildEmptyState(context, isDark);
                 }
 
+                // ── Offline / stale-cache banner ──
+                final offlineBanner = viewModel.isServingCachedData
+                    ? Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          color: Colors.amber.shade700,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.cloud_off_rounded,
+                                  size: 16, color: Colors.white),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'Viewing cached data — connect to refresh',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    viewModel.loadProperties(),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text('Retry',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink();
+
                 // ── Map View ──
                 if (_showMapView) {
                   return Column(
                     children: [
+                      offlineBanner,
                       // Map toggle bar
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -238,7 +284,10 @@ class _PropertyListBodyState extends State<_PropertyListBody> {
 
                 // ── List View ──
 
-                return RefreshIndicator(
+                return Column(
+                  children: [
+                    offlineBanner,
+                    Expanded(child: RefreshIndicator(
                   onRefresh: viewModel.refresh,
                   child: CustomScrollView(
                     controller: _scrollController,
@@ -334,6 +383,8 @@ class _PropertyListBodyState extends State<_PropertyListBody> {
                       ..._buildPropertyList(viewModel, l10n, isDark),
                     ],
                   ),
+                )),
+                  ],
                 );
               },
             ),
@@ -678,10 +729,78 @@ class _PropertyListBodyState extends State<_PropertyListBody> {
                   isLoading: viewModel.locationLoading &&
                       viewModel.sortMode == PropertySortMode.nearest,
                 ),
+                const SizedBox(width: 16),
+                Container(
+                  height: 34,
+                  width: 1,
+                  color: isDark ? AppColors.borderDark : AppColors.border,
+                ),
+                const SizedBox(width: 16),
+                // Advanced filters button with badge
+                GestureDetector(
+                  onTap: () => _showAdvancedFilters(context, viewModel, l10n, isDark),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: viewModel.hasActiveAdvancedFilters
+                          ? AppColors.primary
+                          : (isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: viewModel.hasActiveAdvancedFilters
+                            ? AppColors.primary
+                            : (isDark ? AppColors.borderDark : AppColors.border),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.tune_rounded,
+                          size: 15,
+                          color: viewModel.hasActiveAdvancedFilters
+                              ? Colors.white
+                              : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondary),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Filters',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: viewModel.hasActiveAdvancedFilters
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: viewModel.hasActiveAdvancedFilters
+                                ? Colors.white
+                                : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAdvancedFilters(
+    BuildContext context,
+    PropertyListViewModel viewModel,
+    AppLocalizations l10n,
+    bool isDark,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AdvancedFilterSheet(
+        viewModel: viewModel,
+        isDark: isDark,
       ),
     );
   }
@@ -1413,6 +1532,12 @@ class _AvailablePropertyCard extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (property.owner!['isVerified'] == true)
+                            const Tooltip(
+                              message: 'Identity Verified',
+                              child: Icon(Icons.verified_rounded,
+                                  size: 14, color: Colors.teal),
+                            ),
                         ],
                       ),
                     // Distance badge
@@ -1505,6 +1630,371 @@ class _AvailablePropertyCard extends StatelessWidget {
       child: Text(text,
           style: TextStyle(
               fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Advanced filter bottom sheet
+// ═══════════════════════════════════════════════════════════════════════
+
+class _AdvancedFilterSheet extends StatefulWidget {
+  final PropertyListViewModel viewModel;
+  final bool isDark;
+
+  const _AdvancedFilterSheet({required this.viewModel, required this.isDark});
+
+  @override
+  State<_AdvancedFilterSheet> createState() => _AdvancedFilterSheetState();
+}
+
+class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet>
+    with SingleTickerProviderStateMixin {
+  late PropertyStatus? _status;
+  late double? _maxDist;
+  late bool _verifiedOnly;
+  late bool _photosOnly;
+  late final AnimationController _enterAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    final vm = widget.viewModel;
+    _status = vm.filterStatus;
+    _maxDist = vm.maxDistanceKm;
+    _verifiedOnly = vm.verifiedOwnerOnly;
+    _photosOnly = vm.hasPhotosOnly;
+    _enterAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _enterAnim.dispose();
+    super.dispose();
+  }
+
+  void _apply() {
+    final vm = widget.viewModel;
+    vm.setFilterStatus(_status);
+    vm.setMaxDistanceKm(_maxDist);
+    vm.setVerifiedOwnerOnly(_verifiedOnly);
+    vm.setHasPhotosOnly(_photosOnly);
+    Navigator.pop(context);
+  }
+
+  void _clear() {
+    setState(() {
+      _status = null;
+      _maxDist = null;
+      _verifiedOnly = false;
+      _photosOnly = false;
+    });
+  }
+
+  Widget _stagger(double start, Widget child) {
+    final anim = CurvedAnimation(
+      parent: _enterAnim,
+      curve: Interval(start, (start + 0.45).clamp(0.0, 1.0), curve: Curves.easeOutCubic),
+    );
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (_, c) => Opacity(
+        opacity: anim.value,
+        child: Transform.translate(
+          offset: Offset(0, 14 * (1 - anim.value)),
+          child: c,
+        ),
+      ),
+      child: child,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final vm = widget.viewModel;
+    final bg = isDark ? AppColors.surfaceDark : Colors.white;
+    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimary;
+    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            _stagger(0.0, Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            )),
+            const SizedBox(height: 16),
+
+            // Header
+            _stagger(0.05, Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text('Advanced Filters',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary)),
+                const Spacer(),
+                TextButton(
+                  onPressed: _clear,
+                  child: const Text('Clear all', style: TextStyle(color: AppColors.primary)),
+                ),
+              ],
+            )),
+            const SizedBox(height: 20),
+
+            // Status section
+            _stagger(0.1, Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(width: 3, height: 16, decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    )),
+                    const SizedBox(width: 8),
+                    Text('Status', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8, runSpacing: 8,
+                  children: [
+                    _statusChip(null, 'Any Status', isDark, textPrimary),
+                    _statusChip(PropertyStatus.available, 'Available', isDark, textPrimary),
+                    _statusChip(PropertyStatus.rented, 'Rented', isDark, textPrimary),
+                    _statusChip(PropertyStatus.sold, 'Sold', isDark, textPrimary),
+                    _statusChip(PropertyStatus.pending, 'Pending', isDark, textPrimary),
+                  ],
+                ),
+              ],
+            )),
+            const SizedBox(height: 20),
+
+            // Distance section (only when location known)
+            if (vm.hasUserLocation)
+              _stagger(0.2, Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(width: 3, height: 16, decoration: BoxDecoration(
+                        color: AppColors.secondary,
+                        borderRadius: BorderRadius.circular(2),
+                      )),
+                      const SizedBox(width: 8),
+                      Text('Max Distance', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _maxDist != null ? '${_maxDist!.round()} km' : 'Any',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: _maxDist ?? 50,
+                    min: 1, max: 50, divisions: 49,
+                    activeColor: AppColors.primary,
+                    inactiveColor: AppColors.primary.withValues(alpha: 0.2),
+                    onChanged: (v) => setState(() => _maxDist = v),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('1 km', style: TextStyle(fontSize: 11, color: textSecondary)),
+                      TextButton(
+                        onPressed: () => setState(() => _maxDist = null),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('No limit', style: TextStyle(fontSize: 11, color: AppColors.primary)),
+                      ),
+                      Text('50 km', style: TextStyle(fontSize: 11, color: textSecondary)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              )),
+
+            // Toggle: verified owners only
+            _stagger(0.3, _buildToggle(
+              label: 'Verified owners only',
+              subtitle: 'Show properties from identity-verified owners',
+              icon: Icons.verified_rounded,
+              iconColor: Colors.teal,
+              value: _verifiedOnly,
+              isDark: isDark,
+              onChanged: (v) => setState(() => _verifiedOnly = v),
+            )),
+            const SizedBox(height: 8),
+
+            // Toggle: has photos only
+            _stagger(0.4, _buildToggle(
+              label: 'Has photos only',
+              subtitle: 'Hide listings with no images',
+              icon: Icons.photo_rounded,
+              iconColor: AppColors.info,
+              value: _photosOnly,
+              isDark: isDark,
+              onChanged: (v) => setState(() => _photosOnly = v),
+            )),
+            const SizedBox(height: 24),
+
+            // Apply button
+            _stagger(0.5, SizedBox(
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryLight],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: _apply,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_rounded, size: 18),
+                      SizedBox(width: 8),
+                      Text('Apply Filters', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(PropertyStatus? status, String label, bool isDark, Color textColor) {
+    final isSelected = _status == status;
+    return GestureDetector(
+      onTap: () => setState(() => _status = status),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : (isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : (isDark ? AppColors.borderDark : AppColors.border),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            color: isSelected ? Colors.white : textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggle({
+    required String label,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool value,
+    required bool isDark,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)),
+                Text(subtitle,
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary)),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AppColors.primary,
+          ),
+        ],
+      ),
     );
   }
 }

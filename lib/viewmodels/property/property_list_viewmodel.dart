@@ -20,12 +20,18 @@ class PropertyListViewModel extends ChangeNotifier {
   // State
   bool _isLoading = false;
   String? _error;
+  bool _isServingCachedData = false;
 
   // Search & Filter state
   String _searchQuery = '';
   PropertyType? _filterType;
   PropertyStatus? _filterStatus;
   PropertySortMode _sortMode = PropertySortMode.newest;
+
+  // Advanced filters
+  double? _maxDistanceKm;
+  bool _verifiedOwnerOnly = false;
+  bool _hasPhotosOnly = false;
 
   // User location
   double? _userLat;
@@ -41,16 +47,26 @@ class PropertyListViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasProperties => _myProperties.isNotEmpty;
+  bool get isServingCachedData => _isServingCachedData;
 
   // Filter getters
   String get searchQuery => _searchQuery;
   PropertyType? get filterType => _filterType;
   PropertyStatus? get filterStatus => _filterStatus;
   PropertySortMode get sortMode => _sortMode;
+  double? get maxDistanceKm => _maxDistanceKm;
+  bool get verifiedOwnerOnly => _verifiedOwnerOnly;
+  bool get hasPhotosOnly => _hasPhotosOnly;
   double? get userLat => _userLat;
   double? get userLng => _userLng;
   bool get locationLoading => _locationLoading;
   bool get hasUserLocation => _userLat != null && _userLng != null;
+
+  bool get hasActiveAdvancedFilters =>
+      _filterStatus != null ||
+      _maxDistanceKm != null ||
+      _verifiedOwnerOnly ||
+      _hasPhotosOnly;
 
   // Pagination getters
   int get displayCount => _displayCount;
@@ -86,6 +102,20 @@ class PropertyListViewModel extends ChangeNotifier {
     // Apply status filter
     if (_filterStatus != null) {
       list = list.where((p) => p.propertyStatus == _filterStatus).toList();
+    }
+
+    // Apply advanced filters
+    if (_hasPhotosOnly) {
+      list = list.where((p) => p.propertyImages.isNotEmpty).toList();
+    }
+    if (_verifiedOwnerOnly) {
+      list = list.where((p) => p.owner?['isVerified'] == true).toList();
+    }
+    if (_maxDistanceKm != null && hasUserLocation) {
+      list = list.where((p) {
+        final d = _distanceTo(p);
+        return d != null && d <= _maxDistanceKm!;
+      }).toList();
     }
 
     // Apply sorting
@@ -169,6 +199,34 @@ class PropertyListViewModel extends ChangeNotifier {
     if (mode == PropertySortMode.nearest && !hasUserLocation) {
       fetchUserLocation();
     }
+    notifyListeners();
+  }
+
+  void setMaxDistanceKm(double? km) {
+    _maxDistanceKm = km;
+    _displayCount = _pageSize;
+    if (km != null && !hasUserLocation) fetchUserLocation();
+    notifyListeners();
+  }
+
+  void setVerifiedOwnerOnly(bool value) {
+    _verifiedOwnerOnly = value;
+    _displayCount = _pageSize;
+    notifyListeners();
+  }
+
+  void setHasPhotosOnly(bool value) {
+    _hasPhotosOnly = value;
+    _displayCount = _pageSize;
+    notifyListeners();
+  }
+
+  void clearAdvancedFilters() {
+    _filterStatus = null;
+    _maxDistanceKm = null;
+    _verifiedOwnerOnly = false;
+    _hasPhotosOnly = false;
+    _displayCount = _pageSize;
     notifyListeners();
   }
 
@@ -259,6 +317,7 @@ class PropertyListViewModel extends ChangeNotifier {
       _myProperties = results[0];
       _allProperties = results[1];
       _error = null;
+      _isServingCachedData = false;
 
       // Update cache
       final cache = CacheService.instance;
@@ -266,9 +325,17 @@ class PropertyListViewModel extends ChangeNotifier {
       cache.put<List<PropertyModel>>(_cacheKeyAll, _allProperties);
     } on ApiException catch (e) {
       // Only show error if we have no data at all
-      if (_allProperties.isEmpty) _error = e.message;
+      if (_allProperties.isEmpty) {
+        _error = e.message;
+      } else {
+        _isServingCachedData = true;
+      }
     } catch (e) {
-      if (_allProperties.isEmpty) _error = 'Failed to load properties: $e';
+      if (_allProperties.isEmpty) {
+        _error = 'Failed to load properties: $e';
+      } else {
+        _isServingCachedData = true;
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

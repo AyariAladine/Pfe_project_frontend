@@ -1,15 +1,30 @@
 /// API Constants for the NestJS backend
+///
+/// Override at build time with --dart-define, e.g.:
+///   flutter run --dart-define=API_BASE_URL=http://192.168.1.21:3000
 class ApiConstants {
- 
-  static const String baseUrl = 'http://10.143.72.118:3000';
 
-  static const String chatbotBaseUrl = 'http://10.100.21.118:7001';
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://192.168.1.21:3000',
+  );
+
+  static const String chatbotBaseUrl = String.fromEnvironment(
+    'CHATBOT_BASE_URL',
+    defaultValue: 'http://10.100.21.118:7001',
+  );
 
   /// Face recognition API
-  static const String faceRecognitionBaseUrl = 'http://10.100.21.118:8000';
+  static const String faceRecognitionBaseUrl = String.fromEnvironment(
+    'FACE_RECON_BASE_URL',
+    defaultValue: 'http://10.100.21.118:8000',
+  );
 
   /// Lawyer verification scraper service
-  static const String scraperBaseUrl = 'http://10.100.21.118:7002';
+  static const String scraperBaseUrl = String.fromEnvironment(
+    'SCRAPER_BASE_URL',
+    defaultValue: 'http://10.100.21.118:7002',
+  );
   static const String verifyLawyerUrl = '$scraperBaseUrl/verify-lawyer';
   
   // Auth endpoints
@@ -39,6 +54,10 @@ class ApiConstants {
   static String verificationFinalize(String id) =>
       '/users/$id/verification/finalize';
 
+  // Favorites endpoints (stored on the user document)
+  static const String favorites = '/users/favorites';
+  static String favoriteProperty(String propertyId) => '/users/favorites/$propertyId';
+
   // Lawyers endpoints
   static const String lawyers = '/lawyers';
   static String lawyerById(String id) => '/lawyers/$id';
@@ -52,6 +71,8 @@ class ApiConstants {
   static const String applications = '/applications';
   static const String myApplications = '/applications/my';
   static const String incomingApplications = '/applications/incoming';
+  /// Lawyer-only: applications where assignedLawyerId == current user
+  static const String lawyerCases = '/applications/my-cases';
   static String propertyApplications(String propertyId) =>
       '/applications/property/$propertyId';
   static String applicationById(String id) => '/applications/$id';
@@ -70,6 +91,23 @@ class ApiConstants {
       '/contracts/application/$applicationId';
   static String contractUpdateStatus(String id) => '/contracts/$id/status';
   static String contractSign(String id) => '/contracts/$id/sign';
+  /// Upload the generated contract document (PDF / image)
+  static String contractUploadDocument(String id) =>
+      '/contracts/$id/upload-document';
+
+  /// Resolve the full URL for a stored contract document
+  static String getContractDocumentUrl(String? filePath) {
+    if (filePath == null || filePath.isEmpty) return '';
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    final filename = filePath.split('/').last;
+    return '$baseUrl/uploads/contracts/$filename';
+  }
+
+  // Rental monitoring endpoints
+  static const String myRentals = '/rentals/my';
+  static String rentalMarkPaid(String rentalId) => '/rentals/$rentalId/mark-paid';
 
   static const String nominatimBaseUrl = 'https://nominatim.openstreetmap.org';
   

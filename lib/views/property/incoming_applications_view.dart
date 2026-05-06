@@ -10,8 +10,14 @@ import '../widgets/network_image_with_auth.dart';
 class IncomingApplicationsContent extends StatefulWidget {
   /// Called when owner taps an application to see detail
   final void Function(String applicationId)? onApplicationSelected;
+  /// Called whenever the pending application count changes (for drawer badge)
+  final void Function(int count)? onPendingCountChanged;
 
-  const IncomingApplicationsContent({super.key, this.onApplicationSelected});
+  const IncomingApplicationsContent({
+    super.key,
+    this.onApplicationSelected,
+    this.onPendingCountChanged,
+  });
 
   @override
   State<IncomingApplicationsContent> createState() =>
@@ -30,7 +36,10 @@ class _IncomingApplicationsContentState
   }
 
   void _onChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+      widget.onPendingCountChanged?.call(_vm.pendingCount);
+    }
   }
 
   @override

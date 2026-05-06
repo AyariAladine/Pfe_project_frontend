@@ -63,9 +63,13 @@ class GoogleAuthService {
   factory GoogleAuthService() => _instance;
   GoogleAuthService._internal();
 
-  // Web Client ID
-  static const String _webClientId =
-      '761230600985-tlh9veu4g4e9e13c2rs58ssr94j93h5l.apps.googleusercontent.com';
+  // Web Client ID — override at build time with:
+  //   --dart-define=GOOGLE_WEB_CLIENT_ID=<your-client-id>
+  static const String _webClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '761230600985-tlh9veu4g4e9e13c2rs58ssr94j93h5l.apps.googleusercontent.com',
+  );
 
   // ✅ FIXED: Different configuration for web vs mobile
   final GoogleSignIn _googleSignIn = GoogleSignIn(

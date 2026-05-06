@@ -210,6 +210,27 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
                     property.owner!['phoneNumber'],
                     isDark,
                   ),
+                if (property.owner!['isVerified'] == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        _VerifiedChip(
+                          icon: Icons.badge_rounded,
+                          label: 'Identity Verified',
+                          color: Colors.teal,
+                        ),
+                        if (property.owner!['faceRegistered'] == true)
+                          _VerifiedChip(
+                            icon: Icons.face_retouching_natural_rounded,
+                            label: 'Face Registered',
+                            color: AppColors.primary,
+                          ),
+                      ],
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -832,11 +853,14 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
                         padding: EdgeInsets.only(left: col > 0 ? 3 : 0),
                         child: GestureDetector(
                           onTap: () => _openImageViewer(context, images, start + col),
-                          child: NetworkImageWithAuth(
-                            imageUrl: rowImages[col],
-                            fit: BoxFit.cover,
-                            placeholder: () => _buildImagePlaceholder(),
-                            errorBuilder: () => _buildImagePlaceholder(),
+                          child: Hero(
+                            tag: 'property_img_${rowImages[col]}',
+                            child: NetworkImageWithAuth(
+                              imageUrl: rowImages[col],
+                              fit: BoxFit.cover,
+                              placeholder: () => _buildImagePlaceholder(),
+                              errorBuilder: () => _buildImagePlaceholder(),
+                            ),
                           ),
                         ),
                       ),
@@ -854,10 +878,17 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
   // ─── Fullscreen image lightbox ──────────────────────────────────
 
   void _openImageViewer(BuildContext context, List<String> images, int initial) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.95),
-      builder: (_) => _ImageLightbox(images: images, initialIndex: initial),
+    Navigator.push(
+      context,
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withValues(alpha: 0.95),
+        pageBuilder: (_, __, ___) =>
+            _ImageLightbox(images: images, initialIndex: initial),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
     );
   }
 
@@ -1197,7 +1228,9 @@ class _PropertyDetailContentState extends State<PropertyDetailContent> {
     } catch (_) {
       try {
         await launchUrl(url);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[PropertyDetail] launchUrl failed: $e');
+      }
     }
   }
 
@@ -1406,14 +1439,17 @@ class _ImageLightboxState extends State<_ImageLightbox> {
               minScale: 0.8,
               maxScale: 4.0,
               child: Center(
-                child: NetworkImageWithAuth(
-                  imageUrl: widget.images[i],
-                  fit: BoxFit.contain,
-                  placeholder: () => const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
-                  errorBuilder: () => const Center(
-                    child: Icon(Icons.broken_image_rounded, color: Colors.white54, size: 64),
+                child: Hero(
+                  tag: 'property_img_${widget.images[i]}',
+                  child: NetworkImageWithAuth(
+                    imageUrl: widget.images[i],
+                    fit: BoxFit.contain,
+                    placeholder: () => const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                    errorBuilder: () => const Center(
+                      child: Icon(Icons.broken_image_rounded, color: Colors.white54, size: 64),
+                    ),
                   ),
                 ),
               ),
@@ -1443,12 +1479,27 @@ class _ImageLightboxState extends State<_ImageLightbox> {
               left: 0,
               right: 0,
               child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-                  child: Text(
-                    '${_current + 1} / ${widget.images.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Container(
+                    key: ValueKey(_current),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.photo_library_rounded, color: Colors.white70, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_current + 1} / ${widget.images.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1498,6 +1549,45 @@ class _ImageLightboxState extends State<_ImageLightbox> {
                 )),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VerifiedChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _VerifiedChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );

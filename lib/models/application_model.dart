@@ -227,10 +227,10 @@ class ApplicationModel {
       ownerNotes: json['ownerNotes'] as String?,
       rejectionReason: json['rejectionReason'] as String?,
       visitDate: json['visitDate'] != null
-          ? DateTime.parse(json['visitDate'] as String)
+          ? DateTime.tryParse(json['visitDate'] as String)
           : null,
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
+          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)

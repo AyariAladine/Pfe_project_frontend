@@ -62,7 +62,15 @@ class ChatbotService {
       debugPrint('[ChatbotService] Response status: ${response.statusCode}');
       debugPrint('[ChatbotService] Response body: ${response.body}');
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final Map<String, dynamic> data;
+      try {
+        data = jsonDecode(response.body) as Map<String, dynamic>;
+      } on FormatException {
+        throw ChatbotServiceException(
+          'Chatbot returned invalid JSON (status ${response.statusCode})',
+          reason: 'parse_error',
+        );
+      }
 
       if (response.statusCode != 200) {
         final reason = data['reason']?.toString() ?? 'unknown';

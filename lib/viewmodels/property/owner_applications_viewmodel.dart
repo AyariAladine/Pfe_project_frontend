@@ -126,13 +126,23 @@ class OwnerApplicationsViewModel extends ChangeNotifier {
   Future<bool> markUnderReview({String? note}) =>
       updateStatus(newStatus: ApplicationStatus.underReview, note: note);
 
-  /// Shortcut: schedule a visit
-  Future<bool> scheduleVisit({required String visitDate, String? note}) =>
-      updateStatus(
-        newStatus: ApplicationStatus.visitScheduled,
-        visitDate: visitDate,
-        note: note,
+  /// Shortcut: schedule a visit.
+  /// If the application is still pending it must pass through under_review first
+  /// (the backend enforces pending → under_review → visit_scheduled).
+  Future<bool> scheduleVisit({required String visitDate, String? note}) async {
+    if (_selectedApp == null) return false;
+    if (_selectedApp!.status == ApplicationStatus.pending) {
+      final advanced = await updateStatus(
+        newStatus: ApplicationStatus.underReview,
       );
+      if (!advanced) return false;
+    }
+    return updateStatus(
+      newStatus: ApplicationStatus.visitScheduled,
+      visitDate: visitDate,
+      note: note,
+    );
+  }
 
   /// Shortcut: pre-approve
   Future<bool> preApprove({String? note}) =>
@@ -241,7 +251,9 @@ class OwnerApplicationsViewModel extends ChangeNotifier {
     try {
       _messages = await _service.getMessages(_selectedApp!.id);
       notifyListeners();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[OwnerApplicationsVM] refreshMessages: $e');
+    }
   }
 
   void clearActionMessage() {

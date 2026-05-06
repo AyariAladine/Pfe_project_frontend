@@ -349,15 +349,37 @@ class _LawyerListContentState extends State<LawyerListContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        lawyer.fullName,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              lawyer.fullName,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          if (lawyer.isVerified == true) ...[
+                            const SizedBox(width: 6),
+                            const Tooltip(
+                              message: 'Identity Verified',
+                              child: Icon(Icons.verified_rounded,
+                                  size: 16, color: Colors.teal),
+                            ),
+                          ],
+                          if (lawyer.faceRegistered) ...[
+                            const SizedBox(width: 4),
+                            Tooltip(
+                              message: 'Face Registered',
+                              child: Icon(Icons.face_retouching_natural_rounded,
+                                  size: 16, color: AppColors.primary),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Row(

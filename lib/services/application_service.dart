@@ -72,6 +72,22 @@ class ApplicationService {
     }
   }
 
+  // ─── Lawyer actions ────────────────────────────────────────────
+
+  /// Get all applications assigned to the current lawyer
+  /// (statuses: awaitingLawyer, contractDrafting)
+  Future<List<ApplicationModel>> getLawyerCases() async {
+    final response = await _apiService.get(
+      ApiConstants.lawyerCases,
+      requiresAuth: true,
+    );
+    final list =
+        response is List ? response : (response['data'] as List?) ?? [];
+    return list
+        .map((e) => ApplicationModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // ─── Owner actions ─────────────────────────────────────────────
 
   /// Get all incoming applications for properties the current user owns

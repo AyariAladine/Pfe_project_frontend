@@ -436,7 +436,17 @@ class ApiService {
   
   /// Handle HTTP response (returns dynamic - can be Map or List)
   dynamic _handleResponseDynamic(http.Response response) {
-    final body = jsonDecode(response.body);
+    if (response.body.isEmpty) {
+      if (response.statusCode >= 200 && response.statusCode < 300) return null;
+      throw ApiException(ErrorCodes.unexpectedError, statusCode: response.statusCode);
+    }
+    dynamic body;
+    try {
+      body = jsonDecode(response.body);
+    } catch (_) {
+      if (response.statusCode >= 200 && response.statusCode < 300) return null;
+      throw ApiException(ErrorCodes.unexpectedError, statusCode: response.statusCode);
+    }
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;

@@ -97,6 +97,9 @@ class ContractModel {
   final DateTime? startDate;
   final DateTime? endDate;
 
+  /// File path of the generated/uploaded contract document (PDF or image)
+  final String? documentUrl;
+
   final String? ownerSignatureUrl;
   final String? tenantSignatureUrl;
   final String? lawyerSignatureUrl;
@@ -124,6 +127,7 @@ class ContractModel {
     required this.dealAmount,
     this.startDate,
     this.endDate,
+    this.documentUrl,
     this.ownerSignatureUrl,
     this.tenantSignatureUrl,
     this.lawyerSignatureUrl,
@@ -158,11 +162,12 @@ class ContractModel {
       endDate: json['endDate'] != null
           ? DateTime.tryParse(json['endDate'] as String)
           : null,
+      documentUrl: json['documentUrl'] as String?,
       ownerSignatureUrl: json['ownerSignatureUrl'] as String?,
       tenantSignatureUrl: json['tenantSignatureUrl'] as String?,
       lawyerSignatureUrl: json['lawyerSignatureUrl'] as String?,
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
+          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String)
@@ -204,6 +209,7 @@ class ContractModel {
     Map<String, String>? fields,
     DateTime? startDate,
     DateTime? endDate,
+    String? documentUrl,
     String? ownerSignatureUrl,
     String? tenantSignatureUrl,
     String? lawyerSignatureUrl,
@@ -222,6 +228,7 @@ class ContractModel {
       dealAmount: dealAmount,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
+      documentUrl: documentUrl ?? this.documentUrl,
       ownerSignatureUrl: ownerSignatureUrl ?? this.ownerSignatureUrl,
       tenantSignatureUrl: tenantSignatureUrl ?? this.tenantSignatureUrl,
       lawyerSignatureUrl: lawyerSignatureUrl ?? this.lawyerSignatureUrl,

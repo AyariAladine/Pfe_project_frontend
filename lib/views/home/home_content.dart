@@ -1,44 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../models/property_model.dart';
+import '../../models/user_model.dart';
 import '../../viewmodels/auth/auth_viewmodel.dart';
-import '../../viewmodels/property/property_list_viewmodel.dart';
-import '../widgets/network_image_with_auth.dart';
 
-/// Callback to navigate to a specific section from the dashboard
 typedef OnNavigate = void Function(String destination, {PropertyModel? property});
 
-/// Home page content — real dashboard
-class HomeContent extends StatefulWidget {
+class HomeContent extends StatelessWidget {
   final OnNavigate? onNavigate;
   const HomeContent({super.key, this.onNavigate});
 
-  @override
-  State<HomeContent> createState() => _HomeContentState();
-}
-
-class _HomeContentState extends State<HomeContent> {
-  late PropertyListViewModel _propertyVM;
-
-  @override
-  void initState() {
-    super.initState();
-    _propertyVM = PropertyListViewModel();
-    _propertyVM.loadProperties();
-  }
-
-  @override
-  void dispose() {
-    _propertyVM.dispose();
-    super.dispose();
-  }
-
   String _greeting(AppLocalizations l10n) {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return l10n.goodMorning;
-    if (hour < 18) return l10n.goodAfternoon;
+    final h = DateTime.now().hour;
+    if (h < 12) return l10n.goodMorning;
+    if (h < 18) return l10n.goodAfternoon;
     return l10n.goodEvening;
   }
 
@@ -46,644 +24,667 @@ class _HomeContentState extends State<HomeContent> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final authVM = context.watch<AuthViewModel>();
-    final userName = authVM.currentUser?.name ?? '';
+    final user = context.watch<AuthViewModel>().currentUser;
 
-    return ChangeNotifierProvider.value(
-      value: _propertyVM,
-      child: Consumer<PropertyListViewModel>(
-        builder: (context, vm, _) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 700;
-              final maxWidth = isWide ? 960.0 : constraints.maxWidth;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 700;
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: isWide ? 32 : 20,
+            vertical: 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Welcome banner ──
+              _WelcomeBanner(
+                greeting: _greeting(l10n),
+                userName: user?.name ?? '',
+                subtitle: l10n.managePropertiesEasily,
+                role: user?.role,
+                isVerified: user?.isVerified == true,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 28),
 
-              return RefreshIndicator(
-                onRefresh: vm.refresh,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isWide ? 32 : 20,
-                    vertical: 20,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: maxWidth),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // ── Greeting Card ──
-                          _buildGreetingCard(l10n, isDark, userName),
-                          const SizedBox(height: 24),
+              // ── Lawyer role banner ──
+              if (user?.role == UserRole.lawyer) ...[
+                _LawyerBanner(isDark: isDark),
+                const SizedBox(height: 28),
+              ],
 
-                          // ── Stats + Quick Actions (side by side on web) ──
-                          if (!vm.isLoading && isWide) ...[
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: _buildStatsRow(l10n, isDark, vm),
-                                ),
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.quickActions,
-                                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      _buildQuickActions(l10n, isDark),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 28),
-                          ],
+              // ── Feature tiles ──
+              _SectionLabel(
+                icon: Icons.grid_view_rounded,
+                title: l10n.quickActions,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 14),
+              isWide
+                  ? _FeatureGrid(onNavigate: onNavigate, l10n: l10n, isDark: isDark, crossAxis: 4)
+                  : _FeatureGrid(onNavigate: onNavigate, l10n: l10n, isDark: isDark, crossAxis: 2),
+              const SizedBox(height: 32),
 
-                          // ── Stats + Quick Actions (stacked on mobile) ──
-                          if (!vm.isLoading && !isWide) ...[
-                            _buildStatsRow(l10n, isDark, vm),
-                            const SizedBox(height: 24),
-                            Text(
-                              l10n.quickActions,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildQuickActions(l10n, isDark),
-                            const SizedBox(height: 28),
-                          ],
+              // ── Get verified CTA (if not verified) ──
+              if (user?.isVerified != true) ...[
+                _VerifyCta(isDark: isDark, l10n: l10n),
+                const SizedBox(height: 32),
+              ],
 
-                          if (vm.isLoading) ...[
-                            const SizedBox(height: 24),
-                          ],
-
-                          // ── Nearby Properties ──
-                          _buildNearbySection(l10n, isDark, vm, isWide),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+              // ── Legal tip card ──
+              _LegalTipCard(isDark: isDark),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
     );
   }
+}
 
-  // ── Greeting Card ──
-  Widget _buildGreetingCard(AppLocalizations l10n, bool isDark, String userName) {
+// ── Welcome banner ─────────────────────────────────────────────────────────────
+
+class _WelcomeBanner extends StatelessWidget {
+  final String greeting;
+  final String userName;
+  final String subtitle;
+  final UserRole? role;
+  final bool isVerified;
+  final bool isDark;
+
+  const _WelcomeBanner({
+    required this.greeting,
+    required this.userName,
+    required this.subtitle,
+    required this.role,
+    required this.isVerified,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryLight],
+          colors: [AppColors.primaryDark, AppColors.primary, Color(0xFF264D7A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          stops: [0.0, 0.55, 1.0],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: AppColors.primary.withValues(alpha: 0.38),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            Positioned.fill(child: CustomPaint(painter: _DotPainter())),
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          greeting,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          userName.isNotEmpty ? userName : 'Welcome',
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (isVerified) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.verified_rounded, size: 12, color: AppColors.success),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Verified',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    color: AppColors.success,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Date badge + icon
+                  Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
+                        ),
+                        child: Icon(
+                          role == UserRole.lawyer ? Icons.balance_rounded : Icons.home_work_rounded,
+                          color: AppColors.gold,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              DateFormat('d').format(DateTime.now()),
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                height: 1,
+                              ),
+                            ),
+                            Text(
+                              DateFormat('MMM').format(DateTime.now()).toUpperCase(),
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 9,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Lawyer banner ──────────────────────────────────────────────────────────────
+
+class _LawyerBanner extends StatelessWidget {
+  final bool isDark;
+  const _LawyerBanner({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.goldSurface, AppColors.gold.withValues(alpha: 0.06)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.home_work_rounded,
-                    color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _greeting(l10n),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      userName.isNotEmpty ? userName : l10n.welcomeToAqari,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [AppColors.gold, AppColors.goldDark]),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.balance_rounded, color: Colors.white, size: 20),
           ),
-          const SizedBox(height: 14),
-          Text(
-            l10n.managePropertiesEasily,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 14,
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Legal Professional Dashboard',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.goldDark,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Manage cases, draft contracts, assist clients',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    color: AppColors.goldDark,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  // ── Stats Row ──
-  Widget _buildStatsRow(AppLocalizations l10n, bool isDark, PropertyListViewModel vm) {
+// ── Feature tiles grid ─────────────────────────────────────────────────────────
+
+class _FeatureGrid extends StatelessWidget {
+  final OnNavigate? onNavigate;
+  final AppLocalizations l10n;
+  final bool isDark;
+  final int crossAxis;
+
+  const _FeatureGrid({
+    required this.onNavigate,
+    required this.l10n,
+    required this.isDark,
+    required this.crossAxis,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = _tiles(context);
+    if (crossAxis == 4) {
+      return Row(
+        children: tiles.map((t) => Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: tiles.indexOf(t) < tiles.length - 1 ? 12 : 0),
+            child: t,
+          ),
+        )).toList(),
+      );
+    }
+    // 2-column grid
+    final List<Widget> rows = [];
+    for (int i = 0; i < tiles.length; i += 2) {
+      rows.add(Row(
+        children: [
+          Expanded(child: tiles[i]),
+          const SizedBox(width: 12),
+          Expanded(child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox.shrink()),
+        ],
+      ));
+      if (i + 2 < tiles.length) rows.add(const SizedBox(height: 12));
+    }
+    return Column(children: rows);
+  }
+
+  List<Widget> _tiles(BuildContext context) => [
+    _FeatureTile(
+      icon: Icons.apartment_rounded,
+      title: l10n.properties,
+      description: 'Browse, list & manage rental properties',
+      color: AppColors.primary,
+      isDark: isDark,
+      onTap: () => onNavigate?.call('properties'),
+    ),
+    _FeatureTile(
+      icon: Icons.description_rounded,
+      title: l10n.contracts,
+      description: 'Draft, review & sign legal documents',
+      color: AppColors.gold,
+      isDark: isDark,
+      onTap: () => onNavigate?.call('properties'),
+    ),
+    _FeatureTile(
+      icon: Icons.balance_rounded,
+      title: l10n.lawyers,
+      description: 'Find verified legal professionals',
+      color: AppColors.secondary,
+      isDark: isDark,
+      onTap: () => onNavigate?.call('lawyers'),
+    ),
+    _FeatureTile(
+      icon: Icons.smart_toy_rounded,
+      title: l10n.aiAssistant,
+      description: 'Ask questions about Tunisian property law',
+      color: AppColors.info,
+      isDark: isDark,
+      onTap: () => onNavigate?.call('aiAssistant'),
+    ),
+  ];
+}
+
+class _FeatureTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final Color color;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _FeatureTile({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.color,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.border,
+            width: 0.8,
+          ),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, Color.lerp(color, Colors.black, 0.2)!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, size: 20, color: Colors.white),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 13,
+                  color: isDark ? AppColors.textHintDark : AppColors.textHint,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                height: 1.4,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Section label ──────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool isDark;
+  const _SectionLabel({required this.icon, required this.title, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: _buildStatCard(
-            title: l10n.myListings,
-            value: '${vm.myPropertyCount}',
-            icon: Icons.home_work_rounded,
-            color: AppColors.primary,
-            isDark: isDark,
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
+          child: Icon(icon, size: 16, color: AppColors.primary),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            title: l10n.availableNow,
-            value: '${vm.availablePropertyCount}',
-            icon: Icons.check_circle_outline_rounded,
-            color: AppColors.success,
-            isDark: isDark,
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.2,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-    required bool isDark,
-  }) {
+// ── Verify CTA ────────────────────────────────────────────────────────────────
+
+class _VerifyCta extends StatelessWidget {
+  final bool isDark;
+  final AppLocalizations l10n;
+  const _VerifyCta({required this.isDark, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.border,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: isDark
+            ? AppColors.primary.withValues(alpha: 0.1)
+            : AppColors.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: const Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  value,
+                  l10n.verifyIdentity,
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                     color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  title,
-                  style: TextStyle(
+                  l10n.verifyIdentitySubtitle,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
                     fontSize: 12,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 22),
         ],
       ),
     );
   }
+}
 
-  // ── Quick Actions ──
-  Widget _buildQuickActions(AppLocalizations l10n, bool isDark) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionChip(
-            icon: Icons.add_home_rounded,
-            label: l10n.addProperty,
-            color: AppColors.primary,
-            isDark: isDark,
-            onTap: () => widget.onNavigate?.call('addProperty'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildActionChip(
-            icon: Icons.explore_rounded,
-            label: l10n.exploreProperties,
-            color: AppColors.secondary,
-            isDark: isDark,
-            onTap: () => widget.onNavigate?.call('properties'),
-          ),
-        ),
-      ],
-    );
-  }
+// ── Legal tip card ─────────────────────────────────────────────────────────────
 
-  Widget _buildActionChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : AppColors.border,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 18, color: color),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+class _LegalTipCard extends StatelessWidget {
+  final bool isDark;
+  const _LegalTipCard({required this.isDark});
 
-  // ── Nearby Properties ──
-  Widget _buildNearbySection(AppLocalizations l10n, bool isDark, PropertyListViewModel vm, bool isWide) {
-    final properties = vm.nearbyProperties;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.near_me_rounded, color: AppColors.primary, size: 22),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.nearbyProperties,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            if (vm.nearbyProperties.isNotEmpty)
-              TextButton(
-                onPressed: () => widget.onNavigate?.call('properties'),
-                child: Text(l10n.viewAll),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (vm.isLoading)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (!vm.hasUserLocation)
-          _buildLocationPrompt(l10n, isDark, vm)
-        else if (vm.nearbyProperties.isEmpty)
-          _buildEmptyNearby(l10n, isDark)
-        else if (isWide)
-          ..._buildNearbyGrid(properties, vm, l10n, isDark)
-        else
-          ...properties.map((property) {
-            final distance = vm.distanceToProperty(property);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildNearbyCard(property, distance, l10n, isDark),
-            );
-          }),
-      ],
-    );
-  }
-
-  /// Builds a 2-column grid of nearby property cards for wide screens
-  List<Widget> _buildNearbyGrid(
-    List<PropertyModel> properties,
-    PropertyListViewModel vm,
-    AppLocalizations l10n,
-    bool isDark,
-  ) {
-    final List<Widget> rows = [];
-    for (int i = 0; i < properties.length; i += 2) {
-      final first = properties[i];
-      final second = (i + 1 < properties.length) ? properties[i + 1] : null;
-      rows.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _buildNearbyCard(
-                  first,
-                  vm.distanceToProperty(first),
-                  l10n,
-                  isDark,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: second != null
-                    ? _buildNearbyCard(
-                        second,
-                        vm.distanceToProperty(second),
-                        l10n,
-                        isDark,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    return rows;
-  }
-
-  Widget _buildLocationPrompt(AppLocalizations l10n, bool isDark, PropertyListViewModel vm) {
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.border,
+        gradient: LinearGradient(
+          colors: [
+            AppColors.goldSurface,
+            AppColors.gold.withValues(alpha: 0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+              color: AppColors.gold.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.location_off_rounded,
-                size: 32, color: AppColors.primary),
+            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.gold, size: 18),
           ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.enableLocationForNearby,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ElevatedButton.icon(
-            onPressed: vm.locationLoading ? null : vm.fetchUserLocation,
-            icon: vm.locationLoading
-                ? const SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.my_location_rounded, size: 18),
-            label: Text(l10n.useCurrentLocation),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyNearby(AppLocalizations l10n, bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.border,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.location_searching_rounded,
-              size: 40,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary),
-          const SizedBox(height: 12),
-          Text(
-            l10n.noNearbyProperties,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNearbyCard(
-    PropertyModel property,
-    double? distance,
-    AppLocalizations l10n,
-    bool isDark,
-  ) {
-    return GestureDetector(
-      onTap: () => widget.onNavigate?.call('propertyDetail', property: property),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : AppColors.border,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Thumbnail
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
-              child: SizedBox(
-                width: 90,
-                height: 90,
-                child: property.imageUrl != null
-                    ? NetworkImageWithAuth(
-                        imageUrl: property.imageUrl!,
-                        width: 90,
-                        height: 90,
-                        fit: BoxFit.cover,
-                        placeholder: () => _imagePlaceholder(isDark),
-                        errorBuilder: () => _imagePlaceholder(isDark),
-                      )
-                    : _imagePlaceholder(isDark),
-              ),
-            ),
-            // Info
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Type badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: (property.propertyType == PropertyType.sale
-                                ? AppColors.accent
-                                : AppColors.secondary)
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        property.propertyType == PropertyType.sale
-                            ? l10n.forSale
-                            : l10n.forRent,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: property.propertyType == PropertyType.sale
-                              ? AppColors.accent
-                              : AppColors.secondary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Address
-                    Text(
-                      property.propertyAddress,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // Distance
-                    if (distance != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.near_me_rounded,
-                              size: 13, color: AppColors.primary),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${distance.toStringAsFixed(1)} ${l10n.kmAway}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Legal Tip',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.goldDark,
+                  ),
                 ),
-              ),
+                SizedBox(height: 4),
+                Text(
+                  'In Tunisia, rental contracts must be registered with the tax authority within 3 months of signing to be legally enforceable.',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    color: AppColors.goldDark,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: Icon(Icons.chevron_right_rounded,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _imagePlaceholder(bool isDark) {
-    return Container(
-      width: 90,
-      height: 90,
-      color: isDark ? AppColors.surfaceDark : AppColors.surface,
-      child: Icon(Icons.home_outlined,
-          size: 28,
-          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary),
-    );
+// ── Dot background painter ─────────────────────────────────────────────────────
+
+class _DotPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.035)
+      ..style = PaintingStyle.fill;
+    const spacing = 22.0;
+    for (double x = 0; x < size.width + spacing; x += spacing) {
+      for (double y = 0; y < size.height + spacing; y += spacing) {
+        canvas.drawCircle(Offset(x, y), 1.5, paint);
+      }
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

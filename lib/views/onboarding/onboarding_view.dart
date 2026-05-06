@@ -137,10 +137,12 @@ class _OnboardingContent extends StatelessWidget {
     switch (vm.currentStep) {
       case OnboardingStep.welcome:
         return _WelcomeStep(key: const ValueKey('welcome'));
+      case OnboardingStep.cinFrontScan:
+        return _CinFrontScanStep(key: const ValueKey('cin_front'));
+      case OnboardingStep.cinBackScan:
+        return _CinBackScanStep(key: const ValueKey('cin_back'));
       case OnboardingStep.phoneVerification:
         return _PhoneVerificationStep(key: const ValueKey('phone'));
-      case OnboardingStep.cinScan:
-        return _CinScanStep(key: const ValueKey('cin'));
       case OnboardingStep.biometrics:
         return _BiometricsStep(key: const ValueKey('biometrics'));
       case OnboardingStep.complete:
@@ -421,9 +423,9 @@ class _PhoneVerificationStepState extends State<_PhoneVerificationStep> {
   }
 }
 
-// CIN Scan Step
-class _CinScanStep extends StatelessWidget {
-  const _CinScanStep({super.key});
+// CIN Front Side Scan Step
+class _CinFrontScanStep extends StatelessWidget {
+  const _CinFrontScanStep({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -442,15 +444,11 @@ class _CinScanStep extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(24),
             ),
-            child: Icon(
-              Icons.badge_rounded,
-              size: 50,
-              color: AppColors.primary,
-            ),
+            child: Icon(Icons.badge_rounded, size: 50, color: AppColors.primary),
           ),
           const SizedBox(height: 24),
           Text(
-            l10n.scanCin,
+            l10n.cinFrontSide,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -459,7 +457,7 @@ class _CinScanStep extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            l10n.scanCinDesc,
+            l10n.cinFrontDesc,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -467,7 +465,6 @@ class _CinScanStep extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // Error message
           if (vm.error != null) ...[
             Container(
               padding: const EdgeInsets.all(12),
@@ -480,10 +477,7 @@ class _CinScanStep extends StatelessWidget {
                   Icon(Icons.error_outline, color: AppColors.error, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      vm.error!,
-                      style: TextStyle(color: AppColors.error, fontSize: 14),
-                    ),
+                    child: Text(vm.error!, style: TextStyle(color: AppColors.error, fontSize: 14)),
                   ),
                 ],
               ),
@@ -492,12 +486,12 @@ class _CinScanStep extends StatelessWidget {
           ],
 
           _IdCardSideCaptureCard(
-            title: 'Front Side',
-            description: 'Upload the front side first, then verify the extracted information.',
+            title: l10n.cinFrontSide,
+            description: l10n.cinFrontDesc,
             isCaptured: vm.hasFrontIdCard,
             isConfirmed: vm.frontInfoConfirmed,
             isEnabled: true,
-            fieldCount: (vm.frontIdCardData?['extractedFields'] as Map?)?.length ?? 0,
+            fieldCount: vm.frontExtractedFields.length,
             primaryLabel: kIsWeb ? l10n.uploadImage : l10n.scanWithCamera,
             secondaryLabel: l10n.chooseFromGallery,
             onPrimaryTap: vm.isLoading ? null : () => vm.scanFrontIdCardFromCamera(),
@@ -508,27 +502,113 @@ class _CinScanStep extends StatelessWidget {
           if (vm.hasFrontIdCard) ...[
             const SizedBox(height: 16),
             _ExtractedDataCard(
-              title: 'Front side review',
+              title: l10n.cinFrontReview,
               subtitle: vm.frontInfoConfirmed
-                  ? 'Front-side information confirmed.'
-                  : 'Review the front-side information before proceeding.',
-              fields: vm.frontExtractedFields,
+                  ? l10n.cinFrontConfirmedSubtitle
+                  : l10n.cinReviewSubtitle,
+              fields: vm.frontDisplayFields,
               primaryLabel: vm.frontInfoConfirmed
-                  ? 'Front info confirmed'
-                  : 'Confirm front information',
+                  ? l10n.cinFrontConfirmedBtn
+                  : l10n.cinConfirmFront,
               primaryEnabled: !vm.frontInfoConfirmed,
               onPrimaryTap: vm.frontInfoConfirmed ? null : vm.confirmFrontIdCardInfo,
               statusColor: vm.frontInfoConfirmed ? AppColors.success : AppColors.primary,
+              fieldConfidences: vm.frontFieldConfidences,
+              onFieldChanged: vm.frontInfoConfirmed
+                  ? null
+                  : (key, value) => vm.updateFrontExtractedField(key, value),
             ),
           ],
-          const SizedBox(height: 16),
+
+          if (vm.frontInfoConfirmed) ...[
+            const SizedBox(height: 24),
+            CustomButton(
+              text: l10n.continueText,
+              onPressed: () => vm.nextStep(),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+          TextButton.icon(
+            onPressed: () => vm.previousStep(),
+            icon: const Icon(Icons.arrow_back),
+            label: Text(l10n.back),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// CIN Back Side Scan Step
+class _CinBackScanStep extends StatelessWidget {
+  const _CinBackScanStep({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final vm = context.watch<OnboardingViewModel>();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(Icons.badge_rounded, size: 50, color: AppColors.primary),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l10n.cinBackSide,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.cinBackDesc,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+
+          if (vm.error != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(vm.error!, style: TextStyle(color: AppColors.error, fontSize: 14)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           _IdCardSideCaptureCard(
-            title: 'Back Side',
-            description: 'After the front is confirmed, upload the back side and verify the remaining fields.',
+            title: l10n.cinBackSide,
+            description: l10n.cinBackDesc,
             isCaptured: vm.hasBackIdCard,
             isConfirmed: vm.backInfoConfirmed,
             isEnabled: vm.canCaptureBackSide,
-            fieldCount: (vm.backIdCardData?['extractedFields'] as Map?)?.length ?? 0,
+            fieldCount: vm.backExtractedFields.length,
             primaryLabel: kIsWeb ? l10n.uploadImage : l10n.scanWithCamera,
             secondaryLabel: l10n.chooseFromGallery,
             onPrimaryTap: vm.isLoading || !vm.canCaptureBackSide
@@ -543,32 +623,36 @@ class _CinScanStep extends StatelessWidget {
           if (vm.hasBackIdCard) ...[
             const SizedBox(height: 16),
             _ExtractedDataCard(
-              title: 'Back side review',
+              title: l10n.cinBackReview,
               subtitle: vm.backInfoConfirmed
-                  ? 'Back-side information confirmed.'
-                  : 'Review the back-side information before continuing.',
-              fields: vm.backExtractedFields,
+                  ? l10n.cinBackConfirmedSubtitle
+                  : l10n.cinReviewSubtitle,
+              fields: vm.backDisplayFields,
               primaryLabel: vm.backInfoConfirmed
-                  ? 'Back info confirmed'
-                  : 'Confirm back information',
+                  ? l10n.cinBackConfirmedBtn
+                  : l10n.cinConfirmBack,
               primaryEnabled: !vm.backInfoConfirmed,
               onPrimaryTap: vm.backInfoConfirmed ? null : vm.confirmBackIdCardInfo,
               statusColor: vm.backInfoConfirmed ? AppColors.success : AppColors.primary,
+              fieldConfidences: vm.backFieldConfidences,
+              onFieldChanged: vm.backInfoConfirmed
+                  ? null
+                  : (key, value) => vm.updateBackExtractedField(key, value),
             ),
           ],
 
           if (vm.canReviewCombinedIdData) ...[
             const SizedBox(height: 24),
             _ExtractedDataCard(
-              title: 'Final CIN verification',
+              title: l10n.cinFinalReview,
               subtitle: vm.finalIdVerificationConfirmed
-                  ? 'All extracted ID information has been confirmed.'
-                  : 'Verify the complete information extracted from the front and back before continuing.',
+                  ? l10n.cinAllConfirmedSubtitle
+                  : l10n.cinVerifySubtitle,
               fields: vm.extractedIdCardFields,
               highlightedValue: vm.cinNumber,
               primaryLabel: vm.finalIdVerificationConfirmed
-                  ? 'All information verified'
-                  : 'Verify all CIN information',
+                  ? l10n.cinAllVerifiedBtn
+                  : l10n.cinVerifyAllBtn,
               primaryEnabled: !vm.finalIdVerificationConfirmed,
               onPrimaryTap: vm.finalIdVerificationConfirmed
                   ? null
@@ -586,10 +670,8 @@ class _CinScanStep extends StatelessWidget {
               onPressed: () => vm.nextStep(),
             ),
           ],
-          
+
           const SizedBox(height: 24),
-          
-          // Back button
           TextButton.icon(
             onPressed: () => vm.previousStep(),
             icon: const Icon(Icons.arrow_back),
@@ -1007,12 +1089,12 @@ class _IdCardSideCaptureCard extends StatelessWidget {
                 ),
                 child: Text(
                   isConfirmed
-                      ? 'Confirmed'
+                      ? AppLocalizations.of(context)!.confirmed
                       : isCaptured
-                          ? '$fieldCount fields'
+                          ? AppLocalizations.of(context)!.cinFieldsExtracted(fieldCount)
                           : isEnabled
-                              ? 'Not scanned'
-                              : 'Locked',
+                              ? AppLocalizations.of(context)!.cinNotScanned
+                              : AppLocalizations.of(context)!.cinLocked,
                   style: TextStyle(
                     color: isConfirmed
                         ? AppColors.success
@@ -1042,7 +1124,7 @@ class _IdCardSideCaptureCard extends StatelessWidget {
                 child: _ScanOptionCard(
                   icon: Icons.photo_library_rounded,
                   title: secondaryLabel,
-                  subtitle: 'Select an existing image',
+                  subtitle: AppLocalizations.of(context)!.selectExistingPhoto,
                   onTap: isEnabled ? onSecondaryTap : null,
                   isLoading: isLoading,
                 ),
@@ -1056,7 +1138,7 @@ class _IdCardSideCaptureCard extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: onClear,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Rescan'),
+                label: Text(AppLocalizations.of(context)!.cinRescan),
               ),
             ),
           ],
@@ -1066,7 +1148,7 @@ class _IdCardSideCaptureCard extends StatelessWidget {
   }
 }
 
-class _ExtractedDataCard extends StatelessWidget {
+class _ExtractedDataCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final Map<String, dynamic> fields;
@@ -1075,6 +1157,10 @@ class _ExtractedDataCard extends StatelessWidget {
   final VoidCallback? onPrimaryTap;
   final Color statusColor;
   final String? highlightedValue;
+  /// Called when the user edits a field value inline.
+  final void Function(String key, String value)? onFieldChanged;
+  /// Per-field OCR confidence scores (0.0–1.0). Fields below 0.55 show a warning icon.
+  final Map<String, double> fieldConfidences;
 
   const _ExtractedDataCard({
     required this.title,
@@ -1085,81 +1171,187 @@ class _ExtractedDataCard extends StatelessWidget {
     required this.onPrimaryTap,
     required this.statusColor,
     this.highlightedValue,
+    this.onFieldChanged,
+    this.fieldConfidences = const {},
   });
 
   @override
+  State<_ExtractedDataCard> createState() => _ExtractedDataCardState();
+}
+
+class _ExtractedDataCardState extends State<_ExtractedDataCard> {
+  final Map<String, TextEditingController> _controllers = {};
+
+  @override
+  void didUpdateWidget(_ExtractedDataCard old) {
+    super.didUpdateWidget(old);
+    // Sync controllers with new field values when the map changes externally
+    for (final entry in widget.fields.entries) {
+      final ctrl = _controllers[entry.key];
+      if (ctrl == null) {
+        _controllers[entry.key] =
+            TextEditingController(text: entry.value.toString());
+      } else if (ctrl.text != entry.value.toString()) {
+        ctrl.text = entry.value.toString();
+      }
+    }
+    // Remove controllers for keys no longer present
+    _controllers.removeWhere((k, _) => !widget.fields.containsKey(k));
+  }
+
+  @override
+  void dispose() {
+    for (final ctrl in _controllers.values) {
+      ctrl.dispose();
+    }
+    super.dispose();
+  }
+
+  bool _isLowConf(String key) =>
+      (widget.fieldConfidences[key] ?? 1.0) < 0.55;
+
+  TextEditingController _controllerFor(String key, String value) {
+    return _controllers.putIfAbsent(
+      key,
+      () => TextEditingController(text: value),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final canEdit = widget.onFieldChanged != null;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.08),
+        color: widget.statusColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: widget.statusColor.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: statusColor,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: widget.statusColor,
+                      ),
+                ),
+              ),
+              if (canEdit)
+                Tooltip(
+                  message: AppLocalizations.of(context)!.cinTapToCorrect,
+                  child: Icon(Icons.edit_note_rounded,
+                      size: 18, color: widget.statusColor),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            subtitle,
+            canEdit
+                ? '${widget.subtitle} ${AppLocalizations.of(context)!.cinTapToCorrect}'
+                : widget.subtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
-            ),
+                  color: AppColors.textSecondary,
+                ),
           ),
-          if (highlightedValue != null && highlightedValue!.isNotEmpty) ...[
+          if (widget.highlightedValue != null &&
+              widget.highlightedValue!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              'Detected CIN',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              AppLocalizations.of(context)!.cinDetectedLabel,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             Text(
-              highlightedValue!,
+              widget.highlightedValue!,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
             ),
           ],
-          if (fields.isNotEmpty) ...[
+          if (widget.fields.isNotEmpty) ...[
             const SizedBox(height: 16),
-            ...fields.entries.map(
-              (entry) => Padding(
+            // In read-only mode skip fields that have no value yet.
+            ...widget.fields.entries
+                .where((e) => canEdit || e.value.toString().trim().isNotEmpty)
+                .map((entry) {
+              final label = _localizedFieldLabel(entry.key, AppLocalizations.of(context)!);
+              final value = entry.value.toString();
+
+              if (canEdit) {
+                final ctrl = _controllerFor(entry.key, value);
+                final lowConf = _isLowConf(entry.key);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: TextFormField(
+                    controller: ctrl,
+                    decoration: InputDecoration(
+                      labelText: label,
+                      labelStyle: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      suffixIcon: lowConf
+                          ? Tooltip(
+                              message: 'Low OCR confidence — verify before confirming',
+                              child: const Icon(Icons.warning_amber_rounded,
+                                  color: Colors.orange, size: 18),
+                            )
+                          : null,
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                    onChanged: (v) =>
+                        widget.onFieldChanged!(entry.key, v),
+                  ),
+                );
+              }
+
+              return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       flex: 2,
-                      child: Text(
-                        _formatFieldLabel(entry.key),
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                      child: Text(label,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 3,
-                      child: Text(entry.value.toString()),
+                      child: Text(value),
                     ),
+                    if (_isLowConf(entry.key))
+                      const Tooltip(
+                        message: 'Low OCR confidence — verify before confirming',
+                        child: Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange, size: 16),
+                      ),
                   ],
                 ),
-              ),
-            ),
+              );
+            }),
           ],
           const SizedBox(height: 16),
           CustomButton(
-            text: primaryLabel,
-            onPressed: primaryEnabled ? onPrimaryTap : null,
-            backgroundColor: statusColor,
+            text: widget.primaryLabel,
+            onPressed: widget.primaryEnabled ? widget.onPrimaryTap : null,
+            backgroundColor: widget.statusColor,
           ),
         ],
       ),
@@ -1167,13 +1359,29 @@ class _ExtractedDataCard extends StatelessWidget {
   }
 }
 
-String _formatFieldLabel(String key) {
-  final withSpaces = key.replaceAllMapped(
-    RegExp(r'([a-z])([A-Z])'),
-    (match) => '${match.group(1)} ${match.group(2)}',
-  );
-  if (withSpaces.isEmpty) return key;
-  return withSpaces[0].toUpperCase() + withSpaces.substring(1);
+String _localizedFieldLabel(String key, AppLocalizations l10n) {
+  switch (key) {
+    case 'identityNumber': return l10n.fieldIdentityNumber;
+    case 'lastName':       return l10n.fieldLastName;
+    case 'firstName':      return l10n.fieldFirstName;
+    case 'fullName':       return l10n.fieldFullName;
+    case 'dateOfBirth':    return l10n.fieldDateOfBirth;
+    case 'placeOfBirth':   return l10n.fieldPlaceOfBirth;
+    case 'lineage':        return l10n.fieldLineage;
+    case 'gender':         return l10n.fieldGender;
+    case 'expiryDate':     return l10n.fieldExpiryDate;
+    case 'nationality':    return l10n.fieldNationality;
+    case 'address':        return l10n.fieldAddress;
+    case 'issueDate':      return l10n.fieldIssueDate;
+    case 'issuePlace':     return l10n.fieldIssuePlace;
+    default:
+      // Fallback: camelCase → Title Case
+      final spaced = key.replaceAllMapped(
+        RegExp(r'([a-z])([A-Z])'),
+        (m) => '${m.group(1)} ${m.group(2)}',
+      );
+      return spaced.isEmpty ? key : spaced[0].toUpperCase() + spaced.substring(1);
+  }
 }
 
 class _SummaryRow extends StatelessWidget {

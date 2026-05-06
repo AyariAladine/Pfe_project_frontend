@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../models/application_model.dart';
 import '../../models/contract_model.dart';
+import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../../viewmodels/contract/contract_viewmodel.dart';
+import '../widgets/generated_signature.dart';
 
 /// Contract drafting screen.
 ///
@@ -153,6 +159,12 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
                           // Contract body (Arabic text)
                           _buildContractBody(l10n, isDark),
                           const SizedBox(height: 16),
+
+                          // Signature status (visible once saved)
+                          if (_vm.selected != null) ...[
+                            _buildSignaturesStatus(l10n, isDark),
+                            const SizedBox(height: 16),
+                          ],
 
                           // Action buttons
                           _buildActions(l10n, isDark),
@@ -551,6 +563,29 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
   Widget _buildActions(AppLocalizations l10n, bool isDark) {
     final saved = _vm.selected != null;
     final isEditable = !saved || _vm.selected!.isEditable;
+    final lawyerHasSigned =
+        saved && (_vm.selected!.lawyerSignatureUrl?.isNotEmpty ?? false);
+
+    // Lawyer signs first (while contract is still a draft)
+    final canLawyerSign = saved &&
+        !_vm.isLoading &&
+        (_vm.selected!.status == ContractStatus.draft ||
+            _vm.selected!.status == ContractStatus.pendingReview) &&
+        !lawyerHasSigned;
+
+    // After lawyer signs, they dispatch the contract to owner + tenant
+    final canSendToParties = saved &&
+        !_vm.isLoading &&
+        (_vm.selected!.status == ContractStatus.draft ||
+            _vm.selected!.status == ContractStatus.pendingReview) &&
+        lawyerHasSigned;
+
+    // Owner / tenant sign once the contract has been dispatched
+    final canSign = saved &&
+        !_vm.isLoading &&
+        (_vm.selected!.status == ContractStatus.pendingSignatures ||
+            _vm.selected!.status == ContractStatus.signedByOwner ||
+            _vm.selected!.status == ContractStatus.signedByTenant);
 
     return Wrap(
       spacing: 12,
@@ -593,7 +628,7 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
             ),
           ),
 
-        // Update existing
+        // Update existing draft
         if (saved && isEditable)
           ElevatedButton.icon(
             onPressed: _vm.isLoading ? null : _updateDraft,
@@ -609,8 +644,24 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
             ),
           ),
 
-        // Send for signatures
-        if (saved && isEditable)
+        // Step 1 — Lawyer signs the draft
+        if (canLawyerSign)
+          ElevatedButton.icon(
+            onPressed: () => _showSignDialog(l10n),
+            icon: const Icon(Icons.draw_rounded, size: 18),
+            label: const Text('Sign Contract'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10),
+            ),
+          ),
+
+        // Step 2 — Send to owner + tenant after lawyer has signed
+        if (canSendToParties)
           ElevatedButton.icon(
             onPressed: _vm.isLoading ? null : _sendForSignatures,
             icon: const Icon(Icons.send_rounded, size: 18),
@@ -624,6 +675,152 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
                   horizontal: 20, vertical: 10),
             ),
           ),
+
+        // Owner / tenant sign after dispatch
+        if (canSign)
+          ElevatedButton.icon(
+            onPressed: () => _showSignDialog(l10n),
+            icon: const Icon(Icons.draw_rounded, size: 18),
+            label: const Text('Sign Contract'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10),
+            ),
+          ),
+
+        // Export PDF
+        if (saved)
+          ElevatedButton.icon(
+            onPressed: _vm.isLoading ? null : _exportContractPdf,
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+            label: const Text('Export PDF'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ─── Signature status card ────────────────────────────────────
+
+  Widget _buildSignaturesStatus(AppLocalizations l10n, bool isDark) {
+    final contract = _vm.selected;
+    if (contract == null) return const SizedBox.shrink();
+
+    return _card(
+      isDark: isDark,
+      icon: Icons.history_edu_rounded,
+      title: 'Signature Status',
+      child: Column(
+        children: [
+          _signatureRow(
+            role: l10n.contractLawyer,
+            name: widget.application.assignedLawyerName ?? '—',
+            sigUrl: contract.lawyerSignatureUrl,
+            isDark: isDark,
+          ),
+          const Divider(height: 16),
+          _signatureRow(
+            role: l10n.contractOwner,
+            name: widget.application.ownerName,
+            sigUrl: contract.ownerSignatureUrl,
+            isDark: isDark,
+          ),
+          const Divider(height: 16),
+          _signatureRow(
+            role: l10n.contractTenant,
+            name: widget.application.applicantName,
+            sigUrl: contract.tenantSignatureUrl,
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _signatureRow({
+    required String role,
+    required String name,
+    required String? sigUrl,
+    required bool isDark,
+  }) {
+    final signed = sigUrl != null && sigUrl.isNotEmpty;
+    return Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: signed
+                ? AppColors.success.withValues(alpha: 0.12)
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.shade100),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            signed
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            size: 18,
+            color: signed ? AppColors.success : Colors.grey,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                role,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: signed
+                ? AppColors.success.withValues(alpha: 0.1)
+                : Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            signed ? 'Signed' : 'Pending',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: signed ? AppColors.success : Colors.orange,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -751,14 +948,17 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
       startDate: _startDate,
       endDate: _endDate,
     );
-    if (ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.contractSaved),
-          backgroundColor: AppColors.success,
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? AppLocalizations.of(context)!.contractSaved
+              : (_vm.error ?? 'Failed to save contract'),
         ),
-      );
-    }
+        backgroundColor: ok ? AppColors.success : AppColors.error,
+      ),
+    );
   }
 
   Future<void> _updateDraft() async {
@@ -822,6 +1022,132 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
     }
   }
 
+  Future<void> _exportContractPdf() async {
+    final contract = _vm.selected;
+    if (contract == null) return;
+
+    try {
+      final arabicFont = await PdfGoogleFonts.cairoRegular();
+      final arabicFontBold = await PdfGoogleFonts.cairoBold();
+
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.MultiPage(
+          textDirection: pw.TextDirection.rtl,
+          theme: pw.ThemeData.withFont(base: arabicFont, bold: arabicFontBold),
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          build: (ctx) => [
+            pw.Text(
+              contract.type == ContractType.rental
+                  ? 'عقد إيجار'
+                  : contract.type == ContractType.rentalAnnex
+                      ? 'ملحق عقد إيجار'
+                      : 'عقد بيع',
+              style: pw.TextStyle(font: arabicFontBold, fontSize: 22),
+              textDirection: pw.TextDirection.rtl,
+            ),
+            pw.SizedBox(height: 8),
+            pw.Divider(),
+            pw.SizedBox(height: 16),
+            pw.Text(
+              contract.content,
+              style: pw.TextStyle(font: arabicFont, fontSize: 12, height: 1.6),
+              textDirection: pw.TextDirection.rtl,
+            ),
+          ],
+        ),
+      );
+
+      final bytes = await pdf.save();
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'contract_${contract.id}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF export failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showSignDialog(AppLocalizations l10n) async {
+    if (_vm.selected == null) return;
+
+    // Resolve the signer's verified name.
+    // Prefer the CIN-extracted name stored on the application (owner or tenant)
+    // over the auth profile, since the application data comes from ID verification.
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final currentId = authVM.currentUser?.id ?? '';
+    final isApplicant = currentId == widget.application.applicantId;
+    final isLawyer =
+        _vm.selected != null && currentId == _vm.selected!.lawyerId;
+
+    late String firstName, lastName;
+    if (isLawyer) {
+      firstName = authVM.currentUser?.name ?? '';
+      lastName = authVM.currentUser?.lastName ?? '';
+    } else if (isApplicant) {
+      firstName =
+          widget.application.applicant?['name']?.toString() ??
+          authVM.currentUser?.name ??
+          '';
+      lastName =
+          widget.application.applicant?['lastName']?.toString() ??
+          authVM.currentUser?.lastName ??
+          '';
+    } else {
+      // Signer is the owner
+      final owner = widget.application.property?['owner'];
+      firstName = (owner is Map ? owner['name']?.toString() : null) ??
+          authVM.currentUser?.name ??
+          '';
+      lastName = (owner is Map ? owner['lastName']?.toString() : null) ??
+          authVM.currentUser?.lastName ??
+          '';
+    }
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: _SignDialogBody(
+            firstName: firstName,
+            lastName: lastName,
+            cancelLabel: l10n.cancel,
+            onSign: () async {
+              await _vm.signContract(_vm.selected!.id);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _vm.error == null
+                ? 'Contract signed successfully.'
+                : 'Signing failed: ${_vm.error}',
+          ),
+          backgroundColor:
+              _vm.error == null ? AppColors.success : AppColors.error,
+        ),
+      );
+    }
+  }
+
   Future<void> _pickDate({required bool isStart}) async {
     final initial = isStart
         ? (_startDate ?? DateTime.now())
@@ -849,4 +1175,151 @@ class _ContractDraftContentState extends State<ContractDraftContent> {
 
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
+class _SignDialogBody extends StatefulWidget {
+  final String firstName;
+  final String lastName;
+  final String cancelLabel;
+  final Future<void> Function() onSign;
+
+  const _SignDialogBody({
+    required this.firstName,
+    required this.lastName,
+    required this.cancelLabel,
+    required this.onSign,
+  });
+
+  @override
+  State<_SignDialogBody> createState() => _SignDialogBodyState();
+}
+
+class _SignDialogBodyState extends State<_SignDialogBody> {
+  bool _signing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header banner — Aqari brand colors
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.draw_rounded, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Electronic Signature',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    Text(
+                      'Review your signature before confirming',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Auto-generated signature preview with fade-in animation
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 450),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, child) => Opacity(
+              opacity: v,
+              child: Transform.scale(scale: 0.93 + 0.07 * v, child: child),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.07),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(13),
+                child: GeneratedSignatureWidget(
+                  firstName: widget.firstName,
+                  lastName: widget.lastName,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Actions
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: _signing
+              ? const Center(child: CircularProgressIndicator())
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(widget.cancelLabel),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.verified_rounded, size: 16),
+                      label: const Text('Confirm & Sign'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 22, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () async {
+                        setState(() => _signing = true);
+                        await widget.onSign();
+                      },
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
 }

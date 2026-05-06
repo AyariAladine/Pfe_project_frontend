@@ -87,16 +87,65 @@ class _MyApplicationsContentState extends State<MyApplicationsContent> {
       return _buildEmptyState(l10n, isDark);
     }
 
+    final visitedApps = _vm.applications
+        .where((a) =>
+            a.status == ApplicationStatus.visitScheduled && a.visitDate != null)
+        .toList()
+      ..sort((a, b) => (a.visitDate ?? DateTime(2099))
+          .compareTo(b.visitDate ?? DateTime(2099)));
+
     return RefreshIndicator(
       onRefresh: () => _vm.loadMyApplications(),
-      child: ListView.separated(
+      child: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: _vm.applications.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          return _buildApplicationCard(
-              _vm.applications[index], l10n, isDark);
-        },
+        children: [
+          // Upcoming visits section
+          if (visitedApps.isNotEmpty) ...[
+            Text(
+              'Upcoming Visits',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 120,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: visitedApps.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  return _buildVisitCard(visitedApps[index], l10n, isDark);
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'All Applications',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // All applications list
+          ..._vm.applications.asMap().entries.map((entry) {
+            final index = entry.key;
+            final app = entry.value;
+            final isLast = index == _vm.applications.length - 1;
+            return Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+              child: _buildApplicationCard(app, l10n, isDark),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -439,5 +488,107 @@ class _MyApplicationsContentState extends State<MyApplicationsContent> {
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  Widget _buildVisitCard(ApplicationModel app, AppLocalizations l10n, bool isDark) {
+    final visitDate = app.visitDate;
+    if (visitDate == null) return const SizedBox.shrink();
+
+    final dayStr = visitDate.day.toString();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final monthStr = monthNames[visitDate.month - 1];
+    final timeStr =
+        '${visitDate.hour.toString().padLeft(2, '0')}:${visitDate.minute.toString().padLeft(2, '0')}';
+
+    return InkWell(
+      onTap: widget.onApplicationSelected != null
+          ? () => widget.onApplicationSelected!(app.id)
+          : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Date display
+            Column(
+              children: [
+                Text(
+                  dayStr,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  monthStr,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+
+            // Time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.access_time_rounded,
+                    size: 14,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary),
+                const SizedBox(width: 4),
+                Text(
+                  timeStr,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+
+            // Property address snippet
+            Text(
+              app.propertyAddress,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

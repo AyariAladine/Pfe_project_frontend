@@ -155,32 +155,24 @@ class _CreatePropertyWizardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Consumer<PropertyWizardViewModel>(
-            builder: (context, viewModel, child) {
-              return Column(
-                children: [
-                  // Progress indicator (like onboarding)
-                  _buildProgressIndicator(viewModel),
-
-                  // Content with AnimatedSwitcher
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _buildStepContent(
-                        context,
-                        viewModel,
-                        onPropertyCreated,
-                      ),
-                    ),
+      child: Consumer<PropertyWizardViewModel>(
+        builder: (context, viewModel, child) {
+          return Column(
+            children: [
+              _buildProgressIndicator(viewModel),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: _buildStepContent(
+                    context,
+                    viewModel,
+                    onPropertyCreated,
                   ),
-                ],
-              );
-            },
-          ),
-        ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -234,6 +226,58 @@ class _CreatePropertyWizardBody extends StatelessWidget {
   }
 }
 
+class _StepHeader extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+
+  const _StepHeader({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, size: 26, color: color),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Step 1: Basic Information
 class _BasicInfoStep extends StatelessWidget {
   const _BasicInfoStep({super.key});
@@ -249,40 +293,11 @@ class _BasicInfoStep extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icon
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.home_rounded,
-                size: 40,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Title
-            Text(
-              AppLocalizations.of(context)!.basicInformation,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-
-            // Subtitle
-            Text(
-              AppLocalizations.of(context)!.enterBasicDetails,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
+            _StepHeader(
+              icon: Icons.home_rounded,
+              color: AppColors.primary,
+              title: AppLocalizations.of(context)!.basicInformation,
+              subtitle: AppLocalizations.of(context)!.enterBasicDetails,
             ),
             const SizedBox(height: 20),
 
@@ -599,42 +614,13 @@ class _PhotosStep extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Icon
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(
-              Icons.photo_library_rounded,
-              size: 50,
-              color: AppColors.primary,
-            ),
+          _StepHeader(
+            icon: Icons.photo_library_rounded,
+            color: AppColors.primary,
+            title: AppLocalizations.of(context)!.propertyPhotos,
+            subtitle: AppLocalizations.of(context)!.addPhotosToShowcase,
           ),
           const SizedBox(height: 24),
-
-          // Title
-          Text(
-            AppLocalizations.of(context)!.propertyPhotos,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-
-          // Subtitle
-          Text(
-            AppLocalizations.of(context)!.addPhotosToShowcase,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
 
           // Photo options
           _OptionCard(
@@ -791,48 +777,15 @@ class _LocationStep extends StatelessWidget {
         key: viewModel.locationFormKey,
         child: Column(
           children: [
-            // Icon
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: viewModel.latitude != null
-                    ? AppColors.success.withValues(alpha: 0.1)
-                    : AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                viewModel.latitude != null
-                    ? Icons.check_circle
-                    : Icons.location_on_rounded,
-                size: 50,
-                color: viewModel.latitude != null
-                    ? AppColors.success
-                    : AppColors.primary,
-              ),
+            _StepHeader(
+              icon: Icons.location_on_rounded,
+              color: viewModel.latitude != null
+                  ? AppColors.success
+                  : AppColors.primary,
+              title: AppLocalizations.of(context)!.propertyLocation,
+              subtitle: AppLocalizations.of(context)!.setExactLocation,
             ),
             const SizedBox(height: 24),
-
-            // Title
-            Text(
-              AppLocalizations.of(context)!.propertyLocation,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-
-            // Subtitle
-            Text(
-              AppLocalizations.of(context)!.setExactLocation,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
 
             // Location set confirmation
             if (viewModel.latitude != null && viewModel.longitude != null) ...[
@@ -1200,7 +1153,9 @@ class _MapPickerSheetState extends State<_MapPickerSheet> {
                       } catch (_) {
                         try {
                           await launchUrl(url);
-                        } catch (_) {}
+                        } catch (e) {
+                          debugPrint('[CreateProperty] launchUrl failed: $e');
+                        }
                       }
                     },
                   ),
@@ -1346,40 +1301,11 @@ class _AdditionalInfoStep extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Icon
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(
-              Icons.rate_review_rounded,
-              size: 36,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Title
-          Text(
-            AppLocalizations.of(context)!.reviewAndCreate,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-
-          // Subtitle
-          Text(
-            AppLocalizations.of(context)!.reviewPropertyDetails,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
+          _StepHeader(
+            icon: Icons.rate_review_rounded,
+            color: AppColors.primary,
+            title: AppLocalizations.of(context)!.reviewAndCreate,
+            subtitle: AppLocalizations.of(context)!.reviewPropertyDetails,
           ),
           const SizedBox(height: 16),
 

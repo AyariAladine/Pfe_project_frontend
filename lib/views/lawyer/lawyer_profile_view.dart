@@ -9,7 +9,7 @@ import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../../viewmodels/lawyer/lawyer_profile_viewmodel.dart';
 import '../widgets/camera_capture.dart';
 import '../widgets/network_image_with_auth.dart';
-import '../widgets/signature_pad.dart';
+import '../widgets/generated_signature.dart';
 
 /// Lawyer profile editing content (no Scaffold – used inside MainShell)
 class LawyerProfileContent extends StatefulWidget {
@@ -1051,8 +1051,7 @@ class _LawyerProfileContentState extends State<LawyerProfileContent> {
 
   // ─── Electronic Signature Section ──────────────────────────────
 
-  final GlobalKey<SignaturePadState> _signaturePadKey = GlobalKey();
-  bool _isDrawingMode = false;
+  final GlobalKey<GeneratedSignatureWidgetState> _signatureKey = GlobalKey();
 
   Widget _buildSignatureSection(
     BuildContext context,
@@ -1060,6 +1059,9 @@ class _LawyerProfileContentState extends State<LawyerProfileContent> {
     AppLocalizations l10n,
     bool isDark,
   ) {
+    final firstName = vm.lawyer?.name ?? '';
+    final lastName = vm.lawyer?.lastName ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1072,8 +1074,8 @@ class _LawyerProfileContentState extends State<LawyerProfileContent> {
         ),
         const SizedBox(height: 12),
 
-        // If signature exists and not in drawing mode → show saved
-        if (vm.hasSignature && !_isDrawingMode) ...[
+        // Saved badge
+        if (vm.hasSignature) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
@@ -1096,48 +1098,48 @@ class _LawyerProfileContentState extends State<LawyerProfileContent> {
             ),
           ),
           const SizedBox(height: 12),
+        ],
 
-          Container(
-            height: 150,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark ? AppColors.borderDark : AppColors.border,
-              ),
+        // Auto-generated signature preview
+        Text(
+          'Your electronic signature:',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.border,
+              width: 1.5,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(11),
-              child: Image.network(
-                _getSignatureImageUrl(vm.signatureUrl!),
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Center(
-                  child: Icon(Icons.broken_image_outlined,
-                      color: AppColors.textSecondary, size: 40),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: GeneratedSignatureWidget(
+              key: _signatureKey,
+              firstName: firstName,
+              lastName: lastName,
             ),
           ),
-          const SizedBox(height: 14),
+        ),
+        const SizedBox(height: 14),
 
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => setState(() => _isDrawingMode = true),
-                  icon: const Icon(Icons.edit_rounded, size: 18),
-                  label: Text(l10n.redrawSignature),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
+        // Action buttons
+        Row(
+          children: [
+            if (vm.hasSignature) ...[
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: vm.isSignatureProcessing
@@ -1158,102 +1160,35 @@ class _LawyerProfileContentState extends State<LawyerProfileContent> {
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
-
-        // If no signature or in drawing mode → show pad
-        if (!vm.hasSignature || _isDrawingMode) ...[
-          if (!vm.hasSignature)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : Colors.grey.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.draw_outlined,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                      size: 22),
-                  const SizedBox(width: 10),
-                  Text(
-                    l10n.noSignature,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 12),
-
-          Text(
-            l10n.drawSignature,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          SignaturePad(
-            key: _signaturePadKey,
-            height: 180,
-            penColor: isDark ? Colors.white : Colors.black,
-          ),
-          const SizedBox(height: 14),
-
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    _signaturePadKey.currentState?.clear();
-                    if (_isDrawingMode && vm.hasSignature) {
-                      setState(() => _isDrawingMode = false);
-                    }
-                  },
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: Text(l10n.clearSignature),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
               const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: vm.isSignatureProcessing
-                      ? null
-                      : () => _saveSignature(vm),
-                  icon: vm.isSignatureProcessing
-                      ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.save_rounded, size: 18),
-                  label: Text(l10n.saveSignature),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+            ],
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed:
+                    vm.isSignatureProcessing ? null : () => _saveSignature(vm),
+                icon: vm.isSignatureProcessing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.save_rounded, size: 18),
+                label: Text(
+                  vm.hasSignature ? 'Re-save Signature' : l10n.saveSignature,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
 
         // Feedback message
         if (vm.signatureMessage != null) ...[
@@ -1283,10 +1218,10 @@ class _LawyerProfileContentState extends State<LawyerProfileContent> {
   }
 
   Future<void> _saveSignature(LawyerProfileViewModel vm) async {
-    final bytes = await _signaturePadKey.currentState?.toPngBytes();
+    final bytes = await _signatureKey.currentState?.toPngBytes();
     if (bytes == null) return;
     await vm.saveSignature(bytes);
-    if (mounted) setState(() => _isDrawingMode = false);
+    if (mounted) setState(() {});
   }
 
   bool _isSignatureSuccess(String msg) =>
@@ -1301,11 +1236,6 @@ class _LawyerProfileContentState extends State<LawyerProfileContent> {
       default:
         return msg;
     }
-  }
-
-  String _getSignatureImageUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return '${ApiConstants.baseUrl}$path';
   }
 
   // ─── Save ────────────────────────────────────────────────────────

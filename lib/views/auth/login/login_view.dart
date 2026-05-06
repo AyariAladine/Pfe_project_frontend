@@ -55,68 +55,226 @@ class _LoginViewContent extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background decorative elements
-          _buildBackgroundDecorations(context),
-          
-          // Main content
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWideScreen = constraints.maxWidth > 600;
-                final maxContentWidth = isWideScreen ? 450.0 : constraints.maxWidth;
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWideScreen = constraints.maxWidth > 900;
 
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: maxContentWidth),
+          if (isWideScreen) {
+            return _buildWideLayout(context, l10n);
+          }
+          return _buildNarrowLayout(context, l10n);
+        },
+      ),
+    );
+  }
+
+  // Two-column web layout
+  Widget _buildWideLayout(BuildContext context, AppLocalizations l10n) {
+    return Row(
+      children: [
+        // Left brand panel
+        Expanded(
+          flex: 5,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primaryDark, AppColors.primary, Color(0xFF264D7A)],
+                stops: [0.0, 0.55, 1.0],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(child: CustomPaint(painter: _LoginPatternPainter())),
+                SafeArea(
+                  child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.all(48),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 16),
-
-                          // Language Selector
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [LanguageSelector()],
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppColors.gold, AppColors.goldDark],
+                              ),
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.gold.withValues(alpha: 0.4),
+                                  blurRadius: 32,
+                                  offset: const Offset(0, 12),
+                                  spreadRadius: -4,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.balance_rounded, size: 48, color: Colors.white),
                           ),
-
-                          // Expanded content area
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                          const SizedBox(height: 32),
+                          const Text(
+                            'عقاري',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 52,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.gold,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'A Q A R I',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.5),
+                              letterSpacing: 10,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 32, height: 1, color: AppColors.gold.withValues(alpha: 0.4)),
+                              const SizedBox(width: 10),
+                              Container(width: 6, height: 6, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.gold)),
+                              const SizedBox(width: 10),
+                              Container(width: 32, height: 1, color: AppColors.gold.withValues(alpha: 0.4)),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Real Estate & Legal Solutions',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.5),
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 48),
+                          // Feature points
+                          ...[
+                            ('balance_rounded', 'Legal document management'),
+                            ('home_work_rounded', 'Property listings & search'),
+                            ('verified_user_rounded', 'Identity verification'),
+                          ].map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
                                 children: [
-                                  const SizedBox(height: 24),
-                                  // Logo and Welcome Text
-                                  _buildHeader(context, l10n),
-
-                                  const SizedBox(height: 32),
-
-                                  // Login Form
-                                  _buildLoginForm(context, l10n),
-                                  const SizedBox(height: 24),
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Icon(_iconFromString(item.$1), size: 18, color: AppColors.gold),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Text(
+                                    item.$2,
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      color: Colors.white.withValues(alpha: 0.75),
+                                      fontSize: 14,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-
-                          // Sign Up Link at bottom
-                          _buildSignUpLink(context, l10n),
-
-                          const SizedBox(height: 16),
                         ],
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+        // Right form panel
+        Expanded(
+          flex: 4,
+          child: Container(
+            color: AppColors.background,
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [LanguageSelector()],
+                    ),
+                    const SizedBox(height: 32),
+                    _buildHeader(context, l10n),
+                    const SizedBox(height: 32),
+                    _buildLoginForm(context, l10n),
+                    const SizedBox(height: 24),
+                    _buildSignUpLink(context, l10n),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _iconFromString(String name) {
+    switch (name) {
+      case 'balance_rounded': return Icons.balance_rounded;
+      case 'home_work_rounded': return Icons.home_work_rounded;
+      case 'verified_user_rounded': return Icons.verified_user_rounded;
+      default: return Icons.check_circle_outline_rounded;
+    }
+  }
+
+  // Single-column mobile layout
+  Widget _buildNarrowLayout(BuildContext context, AppLocalizations l10n) {
+    return Stack(
+      children: [
+        _buildBackgroundDecorations(context),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [LanguageSelector()],
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 24),
+                        _buildHeader(context, l10n),
+                        const SizedBox(height: 32),
+                        _buildLoginForm(context, l10n),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+                _buildSignUpLink(context, l10n),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -126,78 +284,74 @@ class _LoginViewContent extends StatelessWidget {
         color: AppColors.background,
         child: Stack(
           children: [
-            // Subtle top accent bar
+            // Top gradient accent bar
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: 4,
+              height: 3,
               child: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary,
-                      AppColors.primaryAccent,
-                    ],
+                    colors: [AppColors.primaryDark, AppColors.gold],
                   ),
                 ),
               ),
             ),
-            // Decorative pattern top-right
+            // Decorative ring top-right
             Positioned(
-              top: -40,
-              right: -40,
+              top: -50,
+              right: -50,
               child: Container(
-                width: 150,
-                height: 150,
+                width: 160,
+                height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    width: 30,
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    width: 32,
                   ),
                 ),
               ),
             ),
-            // Decorative pattern bottom-left
+            // Decorative ring bottom-left
             Positioned(
-              bottom: -60,
-              left: -60,
+              bottom: -70,
+              left: -70,
               child: Container(
-                width: 180,
-                height: 180,
+                width: 200,
+                height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.primaryAccent.withValues(alpha: 0.06),
-                    width: 40,
+                    color: AppColors.gold.withValues(alpha: 0.07),
+                    width: 44,
                   ),
                 ),
               ),
             ),
-            // Small accent dot
+            // Gold accent dot
             Positioned(
-              top: 120,
-              left: 30,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                ),
-              ),
-            ),
-            // Another small accent dot
-            Positioned(
-              bottom: 200,
-              right: 40,
+              top: 130,
+              left: 24,
               child: Container(
                 width: 8,
                 height: 8,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.gold,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 210,
+              right: 32,
+              child: Container(
+                width: 6,
+                height: 6,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.primaryAccent.withValues(alpha: 0.2),
+                  color: AppColors.primaryAccent.withValues(alpha: 0.3),
                 ),
               ),
             ),
@@ -209,48 +363,77 @@ class _LoginViewContent extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context, AppLocalizations l10n) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Logo Container with gradient shadow
-        Container(
-          width: 90,
-          height: 90,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.primary,
-                AppColors.primaryAccent,
+        // Logo + brand row
+        Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.gold, AppColors.goldDark],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                    spreadRadius: -2,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.balance_rounded, size: 26, color: Colors.white),
+            ),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'عقاري',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'AQARI',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10,
+                    color: AppColors.textHint,
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.home_work_rounded,
-            size: 44,
-            color: Colors.white,
-          ),
+          ],
         ),
         const SizedBox(height: 28),
         Text(
           l10n.welcomeBack,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 26,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
             letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           l10n.loginToAccount,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 15,
             color: AppColors.textSecondary,
           ),
         ),
@@ -702,4 +885,23 @@ class _RoleSelectionTile extends StatelessWidget {
       ),
     );
   }
+}
+
+// Diagonal line pattern for the web branding panel
+class _LoginPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.03)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    const spacing = 32.0;
+    for (double i = -size.height; i < size.width + size.height; i += spacing) {
+      canvas.drawLine(Offset(i, 0), Offset(i + size.height, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

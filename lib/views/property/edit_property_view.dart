@@ -653,10 +653,7 @@ class _EditPropertyContentState extends State<EditPropertyContent> {
             children: [
               SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 700),
-                    child: Form(
+                child: Form(
                       key: vm.formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -763,8 +760,6 @@ class _EditPropertyContentState extends State<EditPropertyContent> {
                         ],
                       ),
                     ),
-                  ),
-                ),
               ),
 
               // Success / Error snack overlay

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/application_model.dart';
 import '../../models/contract_model.dart';
 import '../../core/constants/contract_templates.dart';
+import '../../services/api_service.dart';
 import '../../services/contract_service.dart';
 
 /// ViewModel for contract listing, generation, editing, and signing.
@@ -37,7 +38,11 @@ class ContractViewModel extends ChangeNotifier {
     try {
       _contracts = await _service.getMyContracts();
     } catch (e) {
-      _error = e.toString();
+      if (e is ApiException && e.statusCode == 404) {
+        _contracts = [];
+      } else {
+        _error = e.toString();
+      }
     }
     _isLoading = false;
     notifyListeners();
@@ -51,7 +56,11 @@ class ContractViewModel extends ChangeNotifier {
     try {
       _contracts = await _service.getLawyerContracts();
     } catch (e) {
-      _error = e.toString();
+      if (e is ApiException && e.statusCode == 404) {
+        _contracts = [];
+      } else {
+        _error = e.toString();
+      }
     }
     _isLoading = false;
     notifyListeners();

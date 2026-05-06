@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../viewmodels/auth/auth_viewmodel.dart';
 import '../../viewmodels/user/user_profile_viewmodel.dart';
 import '../widgets/camera_capture.dart';
-import '../widgets/signature_pad.dart';
+import '../widgets/generated_signature.dart';
 
 /// User profile editing content (no Scaffold – used inside MainShell)
 class UserProfileContent extends StatefulWidget {
@@ -78,12 +77,9 @@ class _UserProfileContentState extends State<UserProfileContent> {
       children: [
         SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 700),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
                   // ── User avatar placeholder ──
                   _buildAvatarSection(vm, l10n, isDark),
 
@@ -161,8 +157,6 @@ class _UserProfileContentState extends State<UserProfileContent> {
                   ),
                   const SizedBox(height: 40),
                 ],
-              ),
-            ),
           ),
         ),
 
@@ -182,57 +176,93 @@ class _UserProfileContentState extends State<UserProfileContent> {
   ) {
     final user = vm.user;
     final initials = _getInitials(user?.name, user?.lastName);
-    return Center(
-      child: Column(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary,
+            Color.lerp(AppColors.primary, AppColors.primaryDark, 0.55)!,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.28),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Row(
         children: [
           Container(
-            width: 100,
-            height: 100,
+            width: 72,
+            height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              color: Colors.white.withValues(alpha: 0.18),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.45),
+                width: 2,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Center(
               child: Text(
                 initials,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 36,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            user?.fullName ?? '',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            user?.email ?? '',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondary,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user?.fullName ?? '',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  user?.email ?? '',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: 12.5,
+                  ),
+                ),
+                if ((user?.isVerified == true) || (user?.faceRegistered == true)) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      if (user!.isVerified == true)
+                        _WhiteBadge(
+                          icon: Icons.badge_rounded,
+                          label: l10n.identityVerified,
+                        ),
+                      if (user.faceRegistered)
+                        _WhiteBadge(
+                          icon: Icons.face_retouching_natural_rounded,
+                          label: 'Face ID',
+                        ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -642,8 +672,7 @@ class _UserProfileContentState extends State<UserProfileContent> {
 
   // ─── Electronic Signature Section ──────────────────────────────
 
-  final GlobalKey<SignaturePadState> _signaturePadKey = GlobalKey();
-  bool _isDrawingMode = false;
+  final GlobalKey<GeneratedSignatureWidgetState> _signatureKey = GlobalKey();
 
   Widget _buildSignatureSection(
     BuildContext context,
@@ -651,10 +680,13 @@ class _UserProfileContentState extends State<UserProfileContent> {
     AppLocalizations l10n,
     bool isDark,
   ) {
+    final firstName = vm.user?.name ?? '';
+    final lastName = vm.user?.lastName ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Hint text
+        // Hint
         Text(
           l10n.signatureHint,
           style: TextStyle(
@@ -664,9 +696,8 @@ class _UserProfileContentState extends State<UserProfileContent> {
         ),
         const SizedBox(height: 12),
 
-        // If signature exists and not in drawing mode → show saved signature
-        if (vm.hasSignature && !_isDrawingMode) ...[
-          // Status badge
+        // Saved badge
+        if (vm.hasSignature) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
@@ -689,50 +720,48 @@ class _UserProfileContentState extends State<UserProfileContent> {
             ),
           ),
           const SizedBox(height: 12),
+        ],
 
-          // Display saved signature image
-          Container(
-            height: 150,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark ? AppColors.borderDark : AppColors.border,
-              ),
+        // Auto-generated signature preview (always shown)
+        Text(
+          'Your electronic signature:',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.border,
+              width: 1.5,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(11),
-              child: Image.network(
-                _getSignatureImageUrl(vm.signatureUrl!),
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Center(
-                  child: Icon(Icons.broken_image_outlined,
-                      color: AppColors.textSecondary, size: 40),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: GeneratedSignatureWidget(
+              key: _signatureKey,
+              firstName: firstName,
+              lastName: lastName,
             ),
           ),
-          const SizedBox(height: 14),
+        ),
+        const SizedBox(height: 14),
 
-          // Redraw & Delete buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => setState(() => _isDrawingMode = true),
-                  icon: const Icon(Icons.edit_rounded, size: 18),
-                  label: Text(l10n.redrawSignature),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
+        // Action buttons
+        Row(
+          children: [
+            if (vm.hasSignature) ...[
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: vm.isSignatureProcessing
@@ -753,105 +782,35 @@ class _UserProfileContentState extends State<UserProfileContent> {
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
-
-        // If no signature or in drawing mode → show pad
-        if (!vm.hasSignature || _isDrawingMode) ...[
-          if (!vm.hasSignature)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : Colors.grey.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.draw_outlined,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                      size: 22),
-                  const SizedBox(width: 10),
-                  Text(
-                    l10n.noSignature,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 12),
-
-          // Drawing instructions
-          Text(
-            l10n.drawSignature,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // The signature drawing pad
-          SignaturePad(
-            key: _signaturePadKey,
-            height: 180,
-            penColor: isDark ? Colors.white : Colors.black,
-          ),
-          const SizedBox(height: 14),
-
-          // Clear + Save
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    _signaturePadKey.currentState?.clear();
-                    if (_isDrawingMode && vm.hasSignature) {
-                      setState(() => _isDrawingMode = false);
-                    }
-                  },
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: Text(l10n.clearSignature),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
               const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: vm.isSignatureProcessing
-                      ? null
-                      : () => _saveSignature(vm),
-                  icon: vm.isSignatureProcessing
-                      ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.save_rounded, size: 18),
-                  label: Text(l10n.saveSignature),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+            ],
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed:
+                    vm.isSignatureProcessing ? null : () => _saveSignature(vm),
+                icon: vm.isSignatureProcessing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.save_rounded, size: 18),
+                label: Text(
+                  vm.hasSignature ? 'Re-save Signature' : l10n.saveSignature,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
 
         // Feedback message
         if (vm.signatureMessage != null) ...[
@@ -881,10 +840,10 @@ class _UserProfileContentState extends State<UserProfileContent> {
   }
 
   Future<void> _saveSignature(UserProfileViewModel vm) async {
-    final bytes = await _signaturePadKey.currentState?.toPngBytes();
+    final bytes = await _signatureKey.currentState?.toPngBytes();
     if (bytes == null) return;
     await vm.saveSignature(bytes);
-    if (mounted) setState(() => _isDrawingMode = false);
+    if (mounted) setState(() {});
   }
 
   bool _isSignatureSuccess(String msg) =>
@@ -899,11 +858,6 @@ class _UserProfileContentState extends State<UserProfileContent> {
       default:
         return msg;
     }
-  }
-
-  String _getSignatureImageUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return '${ApiConstants.baseUrl}$path';
   }
 
   // ─── Save ─────────────────────────────────────────────────────────
@@ -962,10 +916,9 @@ class _UserProfileContentState extends State<UserProfileContent> {
     UserProfileViewModel vm,
     AppLocalizations l10n,
   ) async {
+    final authVM = context.read<AuthViewModel>();
     final success = await vm.saveProfile();
     if (success && mounted) {
-      // Also refresh auth user data
-      final authVM = context.read<AuthViewModel>();
       authVM.refreshProfile();
     }
   }
@@ -1028,3 +981,38 @@ class _UserProfileContentState extends State<UserProfileContent> {
     );
   }
 }
+
+class _WhiteBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _WhiteBadge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
